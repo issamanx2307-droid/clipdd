@@ -1,11 +1,10 @@
 #!/bin/bash
 # =============================================
-# ClipDD - VPS Setup Script
-# รันบน Ubuntu 22.04 (Hostinger VPS)
-# SSH: ssh root@187.127.107.228
+# ClipDD - VPS Initial Setup Script
+# รันครั้งเดียวบน Ubuntu 22.04 ใหม่ๆ
 # =============================================
-
 set -e
+
 echo "=== ClipDD VPS Setup ==="
 
 # 1. Update system
@@ -22,22 +21,37 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 apt update
 apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# 3. Install git & certbot
+# 3. Install tools
 apt install -y git certbot python3-certbot-nginx
 
-# 4. Clone repo
-cd /var/www
-git clone https://github.com/issamanx2307-droid/clipdd.git
-cd clipdd
+# 4. Stop & disable system nginx (เราจะใช้ Docker nginx แทน)
+systemctl stop nginx 2>/dev/null || true
+systemctl disable nginx 2>/dev/null || true
 
-# 5. Setup .env
-cp .env.example .env
+# 5. Get SSL cert (ก่อน start Docker nginx)
 echo ""
-echo "=== !! แก้ไข .env ก่อน deploy !!"
-echo "รัน: nano /var/www/clipdd/.env"
+echo "=== ขอ SSL Certificate ==="
+echo "รัน: certbot certonly --standalone -d clipdd.com -d www.clipdd.com"
+echo "แล้วค่อย deploy ด้วย infra/deploy.sh"
+echo ""
+
+# 6. Clone repo
+mkdir -p /var/www
+cd /var/www
+if [ -d clipdd ]; then
+  echo "Repo already exists, pulling..."
+  cd clipdd && git pull
+else
+  git clone https://github.com/issamanx2307-droid/clipdd.git
+  cd clipdd
+fi
+
+# 7. Setup .env
+cp .env.example .env
+
 echo ""
 echo "=== ติดตั้งเสร็จแล้ว! ==="
-echo "ขั้นต่อไป:"
-echo "  1. nano .env          (ใส่ค่าจริง)"
-echo "  2. docker compose up --build -d"
-echo "  3. certbot --nginx -d clipdd.com -d www.clipdd.com"
+echo "ขั้นตอนถัดไป:"
+echo "  1. nano /var/www/clipdd/.env              (ใส่ค่าจริง)"
+echo "  2. certbot certonly --standalone -d clipdd.com -d www.clipdd.com"
+echo "  3. bash /var/www/clipdd/infra/deploy.sh   (deploy)"
