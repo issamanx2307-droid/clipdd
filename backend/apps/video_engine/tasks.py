@@ -77,18 +77,59 @@ def generate_voice(text, output_path):
     return output_path
 
 
-def render_video_ffmpeg(audio_path, output_path, duration):
-    """Create simple video with black background + audio using FFmpeg."""
-    cmd = (
-        f'ffmpeg -y '
-        f'-f lavfi -i color=c=black:size=1080x1920:rate=25:duration={duration} '
-        f'-i "{audio_path}" '
-        f'-c:v libx264 -pix_fmt yuv420p '
-        f'-c:a aac -shortest '
-        f'"{output_path}"'
-    )
-    ret = os.system(cmd)
-    return ret == 0
+def render_video_ffmpeg(audio_path, output_path, scenes):
+    """
+    Create a premium video with background, audio, and captions (subtitles).
+    scenes: list of dicts [{'text': '...', 'duration': 4}, ...]
+    """
+    # Font path from fonts-thai-tlwg package on Debian/Ubuntu
+    font_path = '/usr/share/fonts/truetype/tlwg/Loma.ttf'
+    
+    # Base background (Premium Dark Grey-Blue)
+    # Filter to build captions on top of background
+    filter_chains = []
+    current_time = 0
+    total_duration = sum(s['duration'] for s in scenes)
+    
+    for i, scene in enumerate(scenes):
+        end_time = current_time + scene['duration']
+        # Escape single quotes and colons for ffmpeg
+        clean_text = scene['text'].replace("'", "'\\\\''").replace(":", "\\:")
+        
+        # Drawtext filter for each scene
+        # x=(w-tw)/2, y=(h-th)/2 centers the text
+        # enable='between(t,start,end)' controls timing
+        chain = (
+            f"drawtext=fontfile='{font_path}':text='{clean_text}':"
+            f"fontcolor=white:fontsize=80:x=(w-tw)/2:y=(h-th)/2-100:"
+            f"enable='between(t,{current_time},{end_time})':"
+            f"borderw=3:bordercolor=black@0.5"
+        )
+        filter_chains.append(chain)
+        current_time = end_time
+
+    filter_complex = ",".join(filter_chains)
+    
+    cmd = [
+        'ffmpeg', '-y',
+        # Input 1: Color background (9:16 portrait)
+        '-f', 'lavfi', '-i', f'color=c=0x1E293B:size=1080x1920:rate=25:duration={total_duration}',
+        # Input 2: Audio
+        '-i', audio_path,
+        # Filter complex for captions
+        '-vf', filter_complex,
+        '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac', '-shortest',
+        output_path
+    ]
+    
+    import subprocess
+    try:
+        subprocess.run(cmd, check=True, capture_output=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"FFmpeg error: {e.stderr.decode()}")
+        return False
 
 
 @shared_task(bind=True, max_retries=3, queue='video')
@@ -147,7 +188,8 @@ def generate_video_task(self, project_id):
         render_job.save()
 
         # 3. Render video
-        success = render_video_ffmpeg(audio_path, video_path, len(scenes_text) * 4)
+        scenes_data = [{'text': s, 'duration': 4} for s in scenes_text]
+        success = render_video_ffmpeg(audio_path, video_path, scenes_data)
 
         if not success:
             raise Exception('FFmpeg rendering failed')
