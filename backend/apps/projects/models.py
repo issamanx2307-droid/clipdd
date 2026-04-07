@@ -8,6 +8,8 @@ class Project(models.Model):
     product_name = models.CharField(max_length=255)
     key_points = models.TextField(blank=True)
     tone = models.CharField(max_length=50, default='urgency')  # urgency/review/drama
+    template_url = models.URLField(blank=True)
+    duration = models.IntegerField(default=15)  # 15 or 30 seconds
     status = models.CharField(max_length=20, choices=STATUS, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
 

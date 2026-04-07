@@ -9,8 +9,6 @@ const TONES = [
   { value: 'drama',   label: '🎭 ดราม่า',   desc: 'เล่าเรื่อง ไวรัลง่าย' },
 ]
 
-const STAGES = ['form', 'processing', 'result']
-
 function getToken() {
   if (typeof window === 'undefined') return null
   return localStorage.getItem('cd_token')
@@ -29,8 +27,11 @@ function CreateInner() {
   const [product, setProduct] = useState(params?.get('product') || '')
   const [keyPoints, setKeyPoints] = useState('')
   const [tone, setTone] = useState('urgency')
+  const [templateUrl, setTemplateUrl] = useState('')
+  const [duration, setDuration] = useState(15)
   const [stage, setStage] = useState('form')
   const [progress, setProgress] = useState(0)
+  const [progressMsg, setProgressMsg] = useState('AI กำลังเขียนสคริปต์...')
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [credits, setCredits] = useState(null)
@@ -51,12 +52,20 @@ function CreateInner() {
     setError('')
     setStage('processing')
     setProgress(10)
+    setProgressMsg('AI กำลังเขียนสคริปต์...')
 
     try {
       const res = await fetch('/api/projects/', {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ name: product, product_name: product, key_points: keyPoints, tone }),
+        body: JSON.stringify({
+          name: product,
+          product_name: product,
+          key_points: keyPoints,
+          tone,
+          template_url: templateUrl.trim(),
+          duration,
+        }),
       })
 
       if (res.status === 401) {
@@ -71,7 +80,7 @@ function CreateInner() {
       }
 
       const project = await res.json()
-      setProgress(30)
+      setProgress(20)
 
       let attempts = 0
       const poll = setInterval(async () => {
@@ -79,7 +88,13 @@ function CreateInner() {
         const r = await fetch(`/api/projects/${project.id}/render/`, { headers: authHeaders() })
         const data = await r.json()
 
-        setProgress(data.progress || Math.min(10 + attempts * 8, 90))
+        const p = data.progress || Math.min(20 + attempts * 7, 92)
+        setProgress(p)
+
+        if (p < 40) setProgressMsg('AI กำลังเขียนสคริปต์...')
+        else if (p < 60) setProgressMsg(templateUrl ? 'กำลังดาวน์โหลดวิดีโอต้นแบบ...' : 'กำลังสร้างเสียงพากย์...')
+        else if (p < 80) setProgressMsg('กำลังสร้างเสียงพากย์...')
+        else setProgressMsg('กำลังตัดต่อวิดีโอ...')
 
         if (data.project_status === 'done' && data.video_url) {
           clearInterval(poll)
@@ -88,9 +103,9 @@ function CreateInner() {
           if (credits !== null) setCredits(c => Math.max(0, c - 1))
         } else if (data.project_status === 'failed') {
           clearInterval(poll)
-          setError(data.error || 'การสร้างวิดีโอล้มเหลว')
+          setError(data.error || 'การสร้างวิดีโอล้มเหลว กรุณาลองใหม่')
           setStage('form')
-        } else if (attempts > 40) {
+        } else if (attempts > 60) {
           clearInterval(poll)
           setError('หมดเวลา กรุณาลองใหม่')
           setStage('form')
@@ -112,8 +127,7 @@ function CreateInner() {
             <span className={styles.credits}>🎬 เครดิตคงเหลือ: {credits} คลิป</span>
           )}
           <button
-            className={styles.credits}
-            style={{cursor:'pointer',background:'transparent',border:'none',color:'var(--muted)',fontSize:'0.85rem'}}
+            className={styles.logoutBtn}
             onClick={() => { localStorage.removeItem('cd_token'); localStorage.removeItem('cd_user'); window.location.href = '/' }}
           >
             ออกจากระบบ
@@ -130,30 +144,79 @@ function CreateInner() {
             {error && <div className={styles.error}>{error}</div>}
 
             <form onSubmit={handleSubmit} className={styles.form}>
+
+              {/* ชื่อสินค้า */}
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="product-input">ชื่อสินค้า *</label>
+                <label className={styles.label}>ชื่อสินค้า *</label>
                 <input
-                  id="product-input"
                   className={styles.input}
-                  placeholder="เช่น ครีมหน้าใส, กระเป๋าผ้า, หูฟังไร้สาย"
+                  placeholder="เช่น ครีมหน้าใส SPF50, กระเป๋าผ้า, หูฟังไร้สาย"
                   value={product}
                   onChange={e => setProduct(e.target.value)}
                   required
                 />
               </div>
 
+              {/* จุดเด่น */}
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="keypoints-input">จุดเด่นสินค้า (ไม่บังคับ)</label>
+                <label className={styles.label}>จุดเด่นสินค้า (ไม่บังคับ)</label>
                 <textarea
-                  id="keypoints-input"
                   className={styles.textarea}
                   placeholder="เช่น ลดสิวใน 7 วัน, ของแท้ราคาถูก, ส่งฟรี"
                   value={keyPoints}
                   onChange={e => setKeyPoints(e.target.value)}
-                  rows={3}
+                  rows={2}
                 />
               </div>
 
+              {/* ความยาวคลิป */}
+              <div className={styles.field}>
+                <label className={styles.label}>ความยาวคลิป</label>
+                <div className={styles.durationPicker}>
+                  {[15, 30].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      className={`${styles.durationBtn} ${duration === d ? styles.durationActive : ''}`}
+                      onClick={() => setDuration(d)}
+                    >
+                      <span className={styles.durationNum}>{d}s</span>
+                      <span className={styles.durationDesc}>
+                        {d === 15 ? 'สั้น คม จุดใจ' : 'ยาว อธิบายละเอียด'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* คลิปต้นแบบ */}
+              <div className={styles.field}>
+                <label className={styles.label}>
+                  วิดีโอพื้นหลัง (ไม่บังคับ)
+                  <span className={styles.labelHint}> — วาง URL คลิปต้นแบบ TikTok/YouTube/MP4</span>
+                </label>
+                <div className={styles.urlInputWrap}>
+                  <span className={styles.urlIcon}>🎬</span>
+                  <input
+                    className={styles.urlInput}
+                    type="url"
+                    placeholder="https://www.tiktok.com/@... หรือ URL วิดีโอ mp4"
+                    value={templateUrl}
+                    onChange={e => setTemplateUrl(e.target.value)}
+                  />
+                  {templateUrl && (
+                    <button type="button" className={styles.urlClear} onClick={() => setTemplateUrl('')}>✕</button>
+                  )}
+                </div>
+                {templateUrl && (
+                  <p className={styles.urlNote}>✓ AI จะนำวิดีโอนี้เป็นพื้นหลัง และซ้อน script ด้านบน</p>
+                )}
+                {!templateUrl && (
+                  <p className={styles.urlNote}>ถ้าไม่ใส่ จะใช้พื้นหลังสีดำเรียบๆ แทน</p>
+                )}
+              </div>
+
+              {/* สไตล์ */}
               <div className={styles.field}>
                 <label className={styles.label}>สไตล์คลิป</label>
                 <div className={styles.toneGrid}>
@@ -161,7 +224,6 @@ function CreateInner() {
                     <button
                       key={t.value}
                       type="button"
-                      id={`tone-${t.value}`}
                       className={`${styles.toneBtn} ${tone === t.value ? styles.toneActive : ''}`}
                       onClick={() => setTone(t.value)}
                     >
@@ -172,8 +234,8 @@ function CreateInner() {
                 </div>
               </div>
 
-              <button type="submit" className={styles.submitBtn} id="create-submit-btn">
-                ✨ สร้างคลิปเลย
+              <button type="submit" className={styles.submitBtn} disabled={credits === 0}>
+                {credits === 0 ? '😔 เครดิตหมดแล้ว' : `✨ สร้างคลิป ${duration} วินาที`}
               </button>
             </form>
           </div>
@@ -182,12 +244,17 @@ function CreateInner() {
         {stage === 'processing' && (
           <div className={styles.card} style={{textAlign:'center'}}>
             <div className={styles.spinner} />
-            <h2 className={styles.title}>กำลังสร้างคลิป...</h2>
-            <p className={styles.subtitle}>AI กำลังเขียนสคริปต์และสร้างเสียงพากย์</p>
+            <h2 className={styles.title}>กำลังสร้างคลิป {duration}s...</h2>
+            <p className={styles.subtitle}>{progressMsg}</p>
             <div className={styles.progressBar}>
-              <div className={styles.progressFill} style={{width: `${progress}%`}} />
+              <div className={styles.progressFill} style={{width: `${progress}%`, transition:'width 0.8s ease'}} />
             </div>
             <p className={styles.progressLabel}>{progress}%</p>
+            {templateUrl && progress >= 35 && progress < 60 && (
+              <p style={{color:'var(--muted)',fontSize:'0.8rem',marginTop:8}}>
+                ⏳ กำลังดาวน์โหลดวิดีโอต้นแบบ อาจใช้เวลาสักครู่...
+              </p>
+            )}
           </div>
         )}
 
@@ -202,20 +269,15 @@ function CreateInner() {
               controls
               autoPlay
               loop
+              playsInline
             />
 
             <div className={styles.actions}>
-              <a
-                href={result.video_url}
-                download
-                className={styles.actionBtn}
-                id="download-btn"
-              >
+              <a href={result.video_url} download className={styles.actionBtn}>
                 ⬇️ ดาวน์โหลดวิดีโอ
               </a>
               <button
                 className={styles.actionBtnOutline}
-                id="copy-hashtag-btn"
                 onClick={() => {
                   navigator.clipboard.writeText(result.hashtags?.join(' ') || '')
                   alert('คัดลอก hashtag แล้ว!')
@@ -227,13 +289,7 @@ function CreateInner() {
 
             <button
               className={styles.newBtn}
-              id="new-clip-btn"
-              onClick={() => {
-                setStage('form')
-                setProduct('')
-                setKeyPoints('')
-                setResult(null)
-              }}
+              onClick={() => { setStage('form'); setProduct(''); setKeyPoints(''); setTemplateUrl(''); setResult(null) }}
             >
               + สร้างคลิปใหม่
             </button>

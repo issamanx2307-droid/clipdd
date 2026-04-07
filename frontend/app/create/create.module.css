@@ -69,6 +69,82 @@
 .input::placeholder, .textarea::placeholder { color: var(--muted); }
 .input:focus, .textarea:focus { border-color: var(--red); }
 
+/* Duration picker */
+.durationPicker { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.durationBtn {
+  background: var(--bg3);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  transition: border-color 0.2s, background 0.2s;
+  font-family: inherit;
+}
+.durationBtn:hover { border-color: rgba(255,45,85,0.4); }
+.durationActive {
+  border-color: var(--red) !important;
+  background: rgba(255,45,85,0.08) !important;
+}
+.durationNum { font-size: 1.5rem; font-weight: 900; color: var(--text); }
+.durationDesc { font-size: 0.75rem; color: var(--muted); }
+
+/* URL input */
+.labelHint { font-weight: 400; color: var(--muted); font-size: 0.8rem; }
+.urlInputWrap {
+  display: flex;
+  align-items: center;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 14px;
+  gap: 10px;
+  transition: border-color 0.2s;
+}
+.urlInputWrap:focus-within { border-color: var(--red); }
+.urlIcon { font-size: 1rem; flex-shrink: 0; }
+.urlInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 14px 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+}
+.urlInput::placeholder { color: var(--muted); }
+.urlClear {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 4px;
+  flex-shrink: 0;
+}
+.urlNote { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+/* Logout */
+.logoutBtn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: color 0.2s;
+}
+.logoutBtn:hover { color: var(--text); }
+
+.submitBtn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
 .toneGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .toneBtn {
   background: var(--bg3);
