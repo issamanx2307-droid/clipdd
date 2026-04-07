@@ -1,0 +1,86 @@
+.page { min-height: 100vh; background: var(--bg); }
+
+.nav {
+  display: flex;
+  align-items: center;
+  padding: 20px 40px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.logo { font-size: 1.4rem; font-weight: 900; letter-spacing: -1px; }
+.logo span { color: var(--red); }
+
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 65px);
+  padding: 40px 24px;
+}
+
+.card {
+  background: rgba(255,255,255,0.03);
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+.sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 28px; }
+
+.error {
+  background: rgba(255,45,85,0.1);
+  border: 1px solid rgba(255,45,85,0.3);
+  color: #ff8fa3;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  margin-bottom: 20px;
+}
+
+.form { display: flex; flex-direction: column; gap: 18px; }
+
+.field { display: flex; flex-direction: column; gap: 8px; }
+
+.label { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+
+.input {
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input::placeholder { color: rgba(255,255,255,0.25); }
+.input:focus { border-color: rgba(255,45,85,0.5); }
+
+.btn {
+  background: linear-gradient(135deg, #ff2d55, #ff6b35);
+  color: #fff;
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 6px 24px rgba(255,45,85,0.35);
+  margin-top: 4px;
+}
+.btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.switch { text-align: center; color: var(--muted); font-size: 0.88rem; margin-top: 24px; }
+.link { color: #ff8fa3; font-weight: 600; }
+.link:hover { color: var(--red); }

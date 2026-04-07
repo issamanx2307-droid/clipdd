@@ -11,6 +11,19 @@ const TONES = [
 
 const STAGES = ['form', 'processing', 'result']
 
+function getToken() {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem('cd_token')
+}
+
+function authHeaders() {
+  const token = getToken()
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Token ${token}` } : {}),
+  }
+}
+
 function CreateInner() {
   const params = useSearchParams()
   const [product, setProduct] = useState(params?.get('product') || '')
@@ -20,6 +33,16 @@ function CreateInner() {
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
+  const [credits, setCredits] = useState(null)
+
+  useEffect(() => {
+    if (!getToken()) {
+      window.location.href = '/login?next=/create'
+      return
+    }
+    const u = localStorage.getItem('cd_user')
+    if (u) setCredits(JSON.parse(u).credits)
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -30,21 +53,15 @@ function CreateInner() {
     setProgress(10)
 
     try {
-      // Create project
       const res = await fetch('/api/projects/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: product,
-          product_name: product,
-          key_points: keyPoints,
-          tone,
-        }),
+        headers: authHeaders(),
+        body: JSON.stringify({ name: product, product_name: product, key_points: keyPoints, tone }),
       })
 
       if (res.status === 401) {
-        window.location.href = '/login'
+        localStorage.removeItem('cd_token')
+        window.location.href = '/login?next=/create'
         return
       }
 
@@ -56,12 +73,11 @@ function CreateInner() {
       const project = await res.json()
       setProgress(30)
 
-      // Poll render status
       let attempts = 0
       const poll = setInterval(async () => {
         attempts++
-        const status = await fetch(`/api/projects/${project.id}/render/`, { credentials: 'include' })
-        const data = await status.json()
+        const r = await fetch(`/api/projects/${project.id}/render/`, { headers: authHeaders() })
+        const data = await r.json()
 
         setProgress(data.progress || Math.min(10 + attempts * 8, 90))
 
@@ -69,6 +85,7 @@ function CreateInner() {
           clearInterval(poll)
           setResult(data)
           setStage('result')
+          if (credits !== null) setCredits(c => Math.max(0, c - 1))
         } else if (data.project_status === 'failed') {
           clearInterval(poll)
           setError(data.error || 'การสร้างวิดีโอล้มเหลว')
@@ -90,7 +107,18 @@ function CreateInner() {
     <div className={styles.page}>
       <nav className={styles.nav}>
         <a href="/" className={styles.logo}>Clip<span>DD</span></a>
-        <span className={styles.credits}>เครดิตฟรี: 3 คลิป</span>
+        <div style={{display:'flex',alignItems:'center',gap:16}}>
+          {credits !== null && (
+            <span className={styles.credits}>🎬 เครดิตคงเหลือ: {credits} คลิป</span>
+          )}
+          <button
+            className={styles.credits}
+            style={{cursor:'pointer',background:'transparent',border:'none',color:'var(--muted)',fontSize:'0.85rem'}}
+            onClick={() => { localStorage.removeItem('cd_token'); localStorage.removeItem('cd_user'); window.location.href = '/' }}
+          >
+            ออกจากระบบ
+          </button>
+        </div>
       </nav>
 
       <div className={styles.container}>
