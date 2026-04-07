@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import styles from './create.module.css'
 
@@ -11,7 +11,7 @@ const TONES = [
 
 const STAGES = ['form', 'processing', 'result']
 
-export default function CreatePage() {
+function CreateInner() {
   const params = useSearchParams()
   const [product, setProduct] = useState(params?.get('product') || '')
   const [keyPoints, setKeyPoints] = useState('')
@@ -213,5 +213,13 @@ export default function CreatePage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function CreatePage() {
+  return (
+    <Suspense fallback={<div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#0a0a0f',color:'#888'}}>กำลังโหลด...</div>}>
+      <CreateInner />
+    </Suspense>
   )
 }
