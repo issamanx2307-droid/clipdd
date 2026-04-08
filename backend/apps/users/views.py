@@ -58,7 +58,6 @@ class GoogleAuthView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        # Frontend sends email+name from userinfo endpoint
         email = request.data.get('email', '').strip().lower()
         name = request.data.get('name', '').strip()
         access_token = request.data.get('access_token', '').strip()
@@ -66,23 +65,37 @@ class GoogleAuthView(APIView):
         if not email or not access_token:
             return Response({'detail': 'email และ access_token required'}, status=400)
 
-        # Verify the access_token is valid by calling Google userinfo
-        import urllib.request as _urllib
+        # Verify token via Google userinfo
+        import urllib.request as _ur
         import json as _json
         try:
-            req = _urllib.Request(
+            req = _ur.Request(
                 'https://www.googleapis.com/oauth2/v3/userinfo',
                 headers={'Authorization': f'Bearer {access_token}'}
             )
-            with _urllib.urlopen(req, timeout=8) as r:
+            with _ur.urlopen(req, timeout=8) as r:
                 info = _json.loads(r.read())
-            # Confirm email matches
             if info.get('email', '').lower() != email:
                 return Response({'detail': 'email ไม่ตรงกับ token'}, status=400)
         except Exception as e:
             return Response({'detail': f'Google token ไม่ถูกต้อง: {str(e)}'}, status=400)
 
         from .models import User
+
+        # Check if user already exists — skip IP limit for existing users (login flow)
+        existing = User.objects.filter(email=email).first()
+        if not existing:
+            # New account: enforce IP rate limit (3 new accounts/IP/day)
+            ip = get_client_ip(request)
+            cache_key = f'reg_ip_{ip}'
+            count = cache.get(cache_key, 0)
+            if count >= 3:
+                return Response(
+                    {'detail': 'สมัครได้สูงสุด 3 ครั้ง/วัน จาก IP นี้'},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+            cache.set(cache_key, count + 1, 86400)
+
         user, created = User.objects.get_or_create(
             email=email,
             defaults={'name': name, 'is_google': True, 'username': email},
