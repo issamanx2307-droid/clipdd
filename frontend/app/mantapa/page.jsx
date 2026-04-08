@@ -21,12 +21,9 @@ function LoginGate({ onAuth }) {
 
   async function submit(e) {
     e.preventDefault()
-    setLoading(true)
-    setErr('')
+    setLoading(true); setErr('')
     try {
-      const res = await fetch(`${API}/admin-api/dashboard/`, {
-        headers: { 'X-Admin-Token': pw },
-      })
+      const res = await fetch(`${API}/admin-api/dashboard/`, { headers: { 'X-Admin-Token': pw } })
       if (res.ok) { setAdminToken(pw); onAuth(pw) }
       else setErr('รหัสผ่านไม่ถูกต้อง')
     } catch { setErr('เชื่อมต่อไม่ได้') }
@@ -38,14 +35,8 @@ function LoginGate({ onAuth }) {
       <form className={styles.loginBox} onSubmit={submit}>
         <div className={styles.loginLogo}>🛡️</div>
         <h1 className={styles.loginTitle}>ClipDD Admin</h1>
-        <input
-          className={styles.loginInput}
-          type="password"
-          placeholder="Admin Password"
-          value={pw}
-          onChange={e => setPw(e.target.value)}
-          autoFocus
-        />
+        <input className={styles.loginInput} type="password" placeholder="Admin Password"
+          value={pw} onChange={e => setPw(e.target.value)} autoFocus />
         {err && <p className={styles.loginErr}>{err}</p>}
         <button className={styles.loginBtn} type="submit" disabled={loading || !pw}>
           {loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
@@ -58,16 +49,177 @@ function LoginGate({ onAuth }) {
 // ──────────────────────────────────────────────
 // Stat Card
 // ──────────────────────────────────────────────
-function StatCard({ icon, label, value, sub }) {
+function StatCard({ icon, label, value, sub, accent }) {
   return (
     <div className={styles.statCard}>
       <div className={styles.statIcon}>{icon}</div>
       <div className={styles.statBody}>
         <div className={styles.statValue}>{value ?? '—'}</div>
         <div className={styles.statLabel}>{label}</div>
-        {sub && <div className={styles.statSub}>{sub}</div>}
+        {sub && <div className={`${styles.statSub} ${accent ? styles.statSubAccent : ''}`}>{sub}</div>}
       </div>
     </div>
+  )
+}
+
+// ──────────────────────────────────────────────
+// Credits Section
+// ──────────────────────────────────────────────
+function CreditsSection({ token }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/admin-api/credits/`, { headers: { 'X-Admin-Token': token } })
+      if (res.ok) setData(await res.json())
+    } finally { setLoading(false) }
+  }, [token])
+
+  useEffect(() => { load() }, [load])
+
+  function CreditCard({ name, icon, children, statusOk }) {
+    return (
+      <div className={`${styles.creditCard} ${statusOk ? '' : styles.creditCardErr}`}>
+        <div className={styles.creditHeader}>
+          <span className={styles.creditIcon}>{icon}</span>
+          <span className={styles.creditName}>{name}</span>
+          <span className={`${styles.creditDot} ${statusOk ? styles.creditDotOk : styles.creditDotErr}`} />
+        </div>
+        <div className={styles.creditBody}>{children}</div>
+      </div>
+    )
+  }
+
+  if (loading) return <div className={styles.loading}>กำลังดึง API Credits...</div>
+  if (!data) return null
+
+  const openai = data.openai || {}
+  const fal = data.fal || {}
+  const gemini = data.gemini || {}
+
+  return (
+    <div className={styles.creditsSection}>
+      <h2 className={styles.sectionTitle}>💳 API Credits</h2>
+      <div className={styles.creditsGrid}>
+        <CreditCard name="OpenAI" icon="🤖" statusOk={openai.status === 'ok' || openai.status === 'payg'}>
+          {openai.status === 'ok' && <>
+            <div className={styles.creditAmount}>${Number(openai.total_available || 0).toFixed(2)}</div>
+            <div className={styles.creditDetail}>คงเหลือ / จาก ${Number(openai.total_granted || 0).toFixed(2)}</div>
+            <div className={styles.creditBar}>
+              <div className={styles.creditBarFill} style={{ width: `${Math.min(100, ((openai.total_available || 0) / (openai.total_granted || 1)) * 100)}%` }} />
+            </div>
+            <div className={styles.creditUsed}>ใช้ไป ${Number(openai.total_used || 0).toFixed(2)}</div>
+          </>}
+          {openai.status === 'payg' && <>
+            <div className={styles.creditAmount}>{openai.plan}</div>
+            <div className={styles.creditDetail}>Limit ${openai.hard_limit_usd} / ${openai.soft_limit_usd} soft</div>
+          </>}
+          {openai.status === 'error' && <div className={styles.creditErr}>{openai.detail}</div>}
+        </CreditCard>
+
+        <CreditCard name="Fal.ai" icon="⚡" statusOk={fal.status === 'ok'}>
+          {fal.status === 'ok' && <>
+            <div className={styles.creditAmount}>${Number(fal.balance || 0).toFixed(2)}</div>
+            <div className={styles.creditDetail}>คงเหลือ ({fal.currency})</div>
+          </>}
+          {fal.status === 'error' && <div className={styles.creditErr}>{fal.detail}</div>}
+        </CreditCard>
+
+        <CreditCard name="Gemini" icon="✨" statusOk={gemini.status === 'active'}>
+          <div className={styles.creditAmount}>{gemini.model}</div>
+          <div className={styles.creditDetail}>{gemini.note}</div>
+        </CreditCard>
+      </div>
+      <button className={styles.refreshBtn} onClick={load}>↻ Refresh</button>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────
+// Admin AI Chat Widget (floating)
+// ──────────────────────────────────────────────
+function AdminChatWidget({ token }) {
+  const [open, setOpen] = useState(false)
+  const [messages, setMessages] = useState([
+    { role: 'ai', content: 'สวัสดีครับ 🛡️ ผมคือ Admin AI\n\nถามได้เลย เช่น:\n• "วันนี้มี project failed ไหม?"\n• "user ใหม่กี่คน?"\n• "มี chat รอ escalate ไหม?"' }
+  ])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    if (open) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+  }, [open, messages])
+
+  async function send(e) {
+    e?.preventDefault()
+    if (!input.trim() || loading) return
+    const userMsg = input.trim()
+    setInput('')
+    const history = messages.slice(1).map(m => ({ role: m.role === 'ai' ? 'model' : 'user', content: m.content }))
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }])
+    setLoading(true)
+    try {
+      const res = await fetch(`${API}/admin-api/ai-chat/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ message: userMsg, history }),
+      })
+      const data = await res.json()
+      setMessages(prev => [...prev, { role: 'ai', content: data.reply || 'ขออภัย เกิดข้อผิดพลาด' }])
+    } catch {
+      setMessages(prev => [...prev, { role: 'ai', content: 'ขออภัย เชื่อมต่อไม่ได้' }])
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <>
+      {open && (
+        <div className={styles.adminChatWindow}>
+          <div className={styles.adminChatHeader}>
+            <div className={styles.adminChatHeaderLeft}>
+              <span className={styles.adminChatAvatar}>🛡️</span>
+              <div>
+                <div className={styles.adminChatTitle}>Admin AI</div>
+                <div className={styles.adminChatSub}>ถามเรื่องระบบได้เลย</div>
+              </div>
+            </div>
+            <button className={styles.adminChatClose} onClick={() => setOpen(false)}>✕</button>
+          </div>
+
+          <div className={styles.adminChatMessages}>
+            {messages.map((m, i) => (
+              <div key={i} className={`${styles.adminChatMsg} ${m.role === 'user' ? styles.adminChatMsgUser : styles.adminChatMsgAI}`}>
+                {m.role === 'ai' && <span className={styles.adminChatMsgIcon}>🛡️</span>}
+                <div className={styles.adminChatBubble}>{m.content}</div>
+              </div>
+            ))}
+            {loading && (
+              <div className={`${styles.adminChatMsg} ${styles.adminChatMsgAI}`}>
+                <span className={styles.adminChatMsgIcon}>🛡️</span>
+                <div className={styles.adminChatBubble}><span className={styles.typing}><span /><span /><span /></span></div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          <form className={styles.adminChatInput} onSubmit={send}>
+            <input
+              placeholder="ถามเรื่องระบบ..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              disabled={loading}
+              autoFocus={open}
+            />
+            <button type="submit" disabled={!input.trim() || loading}>➤</button>
+          </form>
+        </div>
+      )}
+      <button className={`${styles.adminChatBubble} ${open ? styles.adminChatBubbleOpen : ''}`} onClick={() => setOpen(o => !o)}>
+        {open ? '✕' : '🛡️'}
+      </button>
+    </>
   )
 }
 
@@ -81,20 +233,13 @@ function ChatDetail({ sessionId, token, onBack }) {
   const bottomRef = useRef(null)
 
   const load = useCallback(async () => {
-    const res = await fetch(`${API}/admin-api/chats/${sessionId}/`, {
-      headers: { 'X-Admin-Token': token },
-    })
+    const res = await fetch(`${API}/admin-api/chats/${sessionId}/`, { headers: { 'X-Admin-Token': token } })
     if (res.ok) setData(await res.json())
   }, [sessionId, token])
 
   useEffect(() => { load() }, [load])
-  useEffect(() => {
-    const iv = setInterval(load, 5000)
-    return () => clearInterval(iv)
-  }, [load])
-  useEffect(() => {
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
-  }, [data])
+  useEffect(() => { const iv = setInterval(load, 5000); return () => clearInterval(iv) }, [load])
+  useEffect(() => { setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100) }, [data])
 
   async function sendReply(e) {
     e.preventDefault()
@@ -105,16 +250,11 @@ function ChatDetail({ sessionId, token, onBack }) {
       headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
       body: JSON.stringify({ content: reply }),
     })
-    setReply('')
-    setSending(false)
-    load()
+    setReply(''); setSending(false); load()
   }
 
   async function releaseAI() {
-    await fetch(`${API}/admin-api/chats/${sessionId}/release/`, {
-      method: 'POST',
-      headers: { 'X-Admin-Token': token },
-    })
+    await fetch(`${API}/admin-api/chats/${sessionId}/release/`, { method: 'POST', headers: { 'X-Admin-Token': token } })
     load()
   }
 
@@ -142,27 +282,20 @@ function ChatDetail({ sessionId, token, onBack }) {
         {data.messages.map(m => (
           <div key={m.id} className={`${styles.msgRow} ${m.role === 'user' ? styles.msgRowUser : m.role === 'admin' ? styles.msgRowAdmin : styles.msgRowAI}`}>
             <div className={styles.msgMeta}>
-              <span className={styles.msgRole}>{m.role === 'user' ? '👤' : m.role === 'admin' ? '🛡️' : '🤖'}</span>
+              <span>{m.role === 'user' ? '👤' : m.role === 'admin' ? '🛡️' : '🤖'}</span>
               <span className={styles.msgTime}>{new Date(m.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
               {m.escalate && <span className={styles.escalateTag}>⚠️ Escalate</span>}
             </div>
-            <div className={`${styles.msgBubble} ${m.escalate ? styles.msgBubbleEscalate : ''}`}>
-              {m.content}
-            </div>
+            <div className={`${styles.msgBubble} ${m.escalate ? styles.msgBubbleEscalate : ''}`}>{m.content}</div>
           </div>
         ))}
         <div ref={bottomRef} />
       </div>
 
       <form className={styles.replyRow} onSubmit={sendReply}>
-        <textarea
-          className={styles.replyInput}
-          placeholder="พิมพ์ข้อความตอบกลับ..."
-          value={reply}
-          onChange={e => setReply(e.target.value)}
-          rows={2}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(e) } }}
-        />
+        <textarea className={styles.replyInput} placeholder="พิมพ์ข้อความตอบกลับ..." value={reply}
+          onChange={e => setReply(e.target.value)} rows={2}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(e) } }} />
         <button className={styles.replyBtn} type="submit" disabled={!reply.trim() || sending}>
           {sending ? '...' : '➤ ส่ง'}
         </button>
@@ -176,22 +309,34 @@ function ChatDetail({ sessionId, token, onBack }) {
 // ──────────────────────────────────────────────
 function ChatList({ token, onSelect }) {
   const [chats, setChats] = useState([])
+  const [filter, setFilter] = useState('all')
 
   const load = useCallback(async () => {
-    const res = await fetch(`${API}/admin-api/chats/`, { headers: { 'X-Admin-Token': token } })
+    const res = await fetch(`${API}/admin-api/chats/?filter=${filter}`, { headers: { 'X-Admin-Token': token } })
     if (res.ok) setChats(await res.json())
-  }, [token])
+  }, [token, filter])
 
   useEffect(() => { load() }, [load])
-  useEffect(() => {
-    const iv = setInterval(load, 5000)
-    return () => clearInterval(iv)
-  }, [load])
+  useEffect(() => { const iv = setInterval(load, 5000); return () => clearInterval(iv) }, [load])
+
+  const filters = [
+    { key: 'all', label: 'ทั้งหมด' },
+    { key: 'escalated', label: '👤 รอแอดมิน' },
+    { key: 'unread', label: '🔴 ยังไม่อ่าน' },
+  ]
 
   return (
     <div className={styles.chatListWrap}>
-      <h2 className={styles.sectionTitle}>💬 Chat Sessions</h2>
-      {chats.length === 0 && <p className={styles.empty}>ยังไม่มีการแชท</p>}
+      <div className={styles.chatListTop}>
+        <h2 className={styles.sectionTitle}>💬 Chat Sessions</h2>
+        <div className={styles.filterTabs}>
+          {filters.map(f => (
+            <button key={f.key} className={`${styles.filterTab} ${filter === f.key ? styles.filterTabActive : ''}`}
+              onClick={() => setFilter(f.key)}>{f.label}</button>
+          ))}
+        </div>
+      </div>
+      {chats.length === 0 && <p className={styles.empty}>ไม่มีการแชท</p>}
       {chats.map(c => (
         <div key={c.id} className={`${styles.chatItem} ${c.human_takeover ? styles.chatItemEscalated : ''}`} onClick={() => onSelect(c.id)}>
           <div className={styles.chatItemTop}>
@@ -199,7 +344,9 @@ function ChatList({ token, onSelect }) {
             <span className={styles.chatTime}>{new Date(c.last_message_at).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           <div className={styles.chatItemBot}>
-            <span className={styles.chatPreview}>{c.last_role === 'user' ? '👤' : c.last_role === 'admin' ? '🛡️' : '🤖'} {c.last_message?.slice(0, 60)}{c.last_message?.length > 60 ? '...' : ''}</span>
+            <span className={styles.chatPreview}>
+              {c.last_role === 'user' ? '👤' : c.last_role === 'admin' ? '🛡️' : '🤖'} {c.last_message?.slice(0, 60)}{c.last_message?.length > 60 ? '...' : ''}
+            </span>
             <div className={styles.chatBadges}>
               {c.human_takeover && <span className={styles.badgeHuman}>👤</span>}
               {c.admin_unread > 0 && <span className={styles.badgeUnread}>{c.admin_unread}</span>}
@@ -212,11 +359,11 @@ function ChatList({ token, onSelect }) {
 }
 
 // ──────────────────────────────────────────────
-// Dashboard Stats
+// Dashboard
 // ──────────────────────────────────────────────
 function Dashboard({ token }) {
   const [stats, setStats] = useState(null)
-  const [tab, setTab] = useState('dashboard') // 'dashboard' | 'chats'
+  const [tab, setTab] = useState('dashboard')
   const [selectedChat, setSelectedChat] = useState(null)
 
   const loadStats = useCallback(async () => {
@@ -225,21 +372,26 @@ function Dashboard({ token }) {
   }, [token])
 
   useEffect(() => { loadStats() }, [loadStats])
-  useEffect(() => {
-    const iv = setInterval(loadStats, 10000)
-    return () => clearInterval(iv)
-  }, [loadStats])
+  useEffect(() => { const iv = setInterval(loadStats, 10000); return () => clearInterval(iv) }, [loadStats])
+
+  const tabs = [
+    { key: 'dashboard', label: '📊 Dashboard' },
+    { key: 'chats', label: '💬 Chats', badge: stats?.chats_unread },
+    { key: 'credits', label: '💳 Credits' },
+  ]
 
   return (
     <div className={styles.dashWrap}>
       <div className={styles.topbar}>
         <div className={styles.brand}>🛡️ ClipDD Admin</div>
         <div className={styles.tabs}>
-          <button className={`${styles.tab} ${tab === 'dashboard' ? styles.tabActive : ''}`} onClick={() => { setTab('dashboard'); setSelectedChat(null) }}>📊 Dashboard</button>
-          <button className={`${styles.tab} ${tab === 'chats' ? styles.tabActive : ''}`} onClick={() => { setTab('chats'); setSelectedChat(null) }}>
-            💬 Chats
-            {stats?.chats_unread > 0 && <span className={styles.tabBadge}>{stats.chats_unread}</span>}
-          </button>
+          {tabs.map(t => (
+            <button key={t.key} className={`${styles.tab} ${tab === t.key ? styles.tabActive : ''}`}
+              onClick={() => { setTab(t.key); setSelectedChat(null) }}>
+              {t.label}
+              {t.badge > 0 && <span className={styles.tabBadge}>{t.badge}</span>}
+            </button>
+          ))}
         </div>
         <button className={styles.logoutBtn} onClick={() => { clearAdminToken(); window.location.reload() }}>ออกจากระบบ</button>
       </div>
@@ -250,15 +402,14 @@ function Dashboard({ token }) {
             <StatCard icon="👥" label="Users ทั้งหมด" value={stats?.users_total} sub={`+${stats?.users_today ?? 0} วันนี้`} />
             <StatCard icon="🎬" label="Projects ทั้งหมด" value={stats?.projects_total} sub={`+${stats?.projects_today ?? 0} วันนี้`} />
             <StatCard icon="🎥" label="Videos สำเร็จ" value={stats?.videos_total} />
-            <StatCard icon="💬" label="Chat Sessions" value={stats?.chats_total} sub={`${stats?.chats_escalated ?? 0} รอแอดมิน`} />
+            <StatCard icon="💬" label="Chat Sessions" value={stats?.chats_total} sub={`${stats?.chats_escalated ?? 0} รอแอดมิน`} accent={stats?.chats_escalated > 0} />
           </div>
-
           {stats?.projects_by_status && (
             <div className={styles.statusSection}>
               <h2 className={styles.sectionTitle}>📋 Project Status</h2>
               <div className={styles.statusGrid}>
                 {Object.entries(stats.projects_by_status).map(([s, n]) => (
-                  <div key={s} className={styles.statusCard}>
+                  <div key={s} className={`${styles.statusCard} ${s === 'failed' && n > 0 ? styles.statusCardFailed : ''}`}>
                     <div className={styles.statusCount}>{n}</div>
                     <div className={styles.statusLabel}>{s}</div>
                   </div>
@@ -280,6 +431,14 @@ function Dashboard({ token }) {
           <ChatDetail sessionId={selectedChat} token={token} onBack={() => setSelectedChat(null)} />
         </div>
       )}
+
+      {tab === 'credits' && (
+        <div className={styles.content}>
+          <CreditsSection token={token} />
+        </div>
+      )}
+
+      <AdminChatWidget token={token} />
     </div>
   )
 }
@@ -289,12 +448,7 @@ function Dashboard({ token }) {
 // ──────────────────────────────────────────────
 export default function MantapaPage() {
   const [token, setToken] = useState(null)
-
-  useEffect(() => {
-    const t = getAdminToken()
-    if (t) setToken(t)
-  }, [])
-
+  useEffect(() => { const t = getAdminToken(); if (t) setToken(t) }, [])
   if (!token) return <LoginGate onAuth={t => setToken(t)} />
   return <Dashboard token={token} />
 }
