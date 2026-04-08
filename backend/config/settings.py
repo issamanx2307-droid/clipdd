@@ -110,6 +110,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # OpenAI
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 
+# Fal.ai (Flux Schnell + Kling)
+FAL_KEY = os.environ.get('FAL_KEY', '')
+
 # Storage (MinIO / S3)
 USE_S3 = os.environ.get('USE_S3', 'False') == 'True'
 if USE_S3:

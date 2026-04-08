@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Project
+from .models import Project, GeneratedImage
+
+
+class GeneratedImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneratedImage
+        fields = ['id', 'image_url', 'generation_round', 'is_selected', 'created_at']
 
 
 class ProjectSerializer(serializers.ModelSerializer):
