@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     'apps.billing',
     'apps.analytics',
     'rest_framework.authtoken',
+    'apps.support',
 ]
 
 MIDDLEWARE = [
@@ -112,6 +113,17 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 
 # Fal.ai (Flux Schnell + Kling)
 FAL_KEY = os.environ.get('FAL_KEY', '')
+
+# Gemini (AI Chat Support)
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+
+# Cache (Redis) — for IP rate limiting
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': REDIS_URL,
+    }
+}
 
 # Storage (MinIO / S3)
 USE_S3 = os.environ.get('USE_S3', 'False') == 'True'

@@ -11,4 +11,5 @@ urlpatterns = [
     path('api/', include('apps.video_engine.urls')),
     path('api/', include('apps.billing.urls')),
     path('api/', include('apps.analytics.urls')),
+    path('api/', include('apps.support.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

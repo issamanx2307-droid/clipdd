@@ -2,6 +2,15 @@
 import { useState } from 'react'
 import styles from '../login/auth.module.css'
 
+async function getFingerprint() {
+  try {
+    const FingerprintJS = (await import('@fingerprintjs/fingerprintjs')).default
+    const fp = await FingerprintJS.load()
+    const result = await fp.get()
+    return result.visitorId
+  } catch { return '' }
+}
+
 export default function RegisterPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -14,10 +23,11 @@ export default function RegisterPage() {
     setError('')
     setLoading(true)
     try {
+      const fingerprint = await getFingerprint()
       const res = await fetch('/api/auth/register/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, fingerprint }),
       })
       const data = await res.json()
       if (!res.ok) {
