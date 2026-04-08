@@ -417,3 +417,19 @@
 }
 .logoutBtn:hover { color: var(--text); }
 .submitBtn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+
+/* Voice picker */
+.voiceGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.voiceBtn {
+  background: var(--bg3); border: 2px solid var(--border); border-radius: 14px;
+  padding: 14px 8px; cursor: pointer; text-align: center;
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+  transition: border-color 0.2s, background 0.2s; font-family: inherit;
+}
+.voiceBtn:hover { border-color: rgba(255,45,85,0.4); }
+.voiceActive { border-color: var(--red) !important; background: rgba(255,45,85,0.08) !important; }
+.voiceEmoji { font-size: 1.4rem; }
+.voiceName { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.voiceDesc { font-size: 0.68rem; color: var(--muted); line-height: 1.4; }
+@media (max-width: 480px) { .voiceGrid { grid-template-columns: repeat(2, 1fr); } }

@@ -82,14 +82,14 @@ def _template_script(product_name, tone, scene_count=4):
 # VOICE GENERATION
 # ─────────────────────────────────────────────
 
-def generate_voice(text, output_path):
+def generate_voice(text, output_path, voice='nova'):
     from openai import OpenAI
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     response = client.audio.speech.create(
         model="tts-1",
-        voice="nova",   # nova = สมจริง เหมาะกับภาษาไทย
+        voice=voice,
         input=text,
-        speed=1.1,      # เร็วขึ้นนิดหน่อยให้ฟังดู energetic แบบ TikTok
+        speed=1.1,
     )
     response.stream_to_file(output_path)
     return output_path
@@ -328,7 +328,7 @@ def generate_video_task(self, project_id):
         image_url = selected.image_url
 
         # 4. Generate voice
-        generate_voice(full_text, audio_path)
+        generate_voice(full_text, audio_path, voice=project.voice or 'nova')
         render_job.progress = 25
         render_job.save()
 

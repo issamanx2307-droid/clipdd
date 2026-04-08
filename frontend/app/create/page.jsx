@@ -34,6 +34,7 @@ function CreateInner() {
   const [keyPoints, setKeyPoints]   = useState('')
   const [tone, setTone]             = useState('urgency')
   const [duration, setDuration]     = useState(15)
+  const [voice, setVoice]           = useState('nova')
   const [refImages, setRefImages]   = useState([])   // File[] max 2
   const fileRef                     = useRef(null)
 
@@ -111,6 +112,7 @@ function CreateInner() {
     formData.append('product_name', product)
     formData.append('key_points', keyPoints)
     formData.append('tone', tone)
+    formData.append('voice', voice)
     formData.append('duration', duration)
     refImages.forEach(f => formData.append('images', f))
 
@@ -276,6 +278,27 @@ function CreateInner() {
                       onClick={() => setDuration(d)}>
                       <span className={styles.durationNum}>{d}s</span>
                       <span className={styles.durationDesc}>{d === 15 ? 'สั้น คม จุดใจ' : 'ยาว อธิบายละเอียด'}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Voice */}
+              <div className={styles.field}>
+                <label className={styles.label}>เสียงพากย์</label>
+                <div className={styles.voiceGrid}>
+                  {[
+                    { value: 'nova',    emoji: '👩', label: 'Nova',    desc: 'หญิง · สดใส · TikTok' },
+                    { value: 'shimmer', emoji: '👩', label: 'Shimmer', desc: 'หญิง · นุ่มนวล · รีวิว' },
+                    { value: 'onyx',    emoji: '👨', label: 'Onyx',    desc: 'ชาย · หนักแน่น · น่าเชื่อ' },
+                    { value: 'echo',    emoji: '👨', label: 'Echo',    desc: 'ชาย · กลาง · เป็นธรรมชาติ' },
+                  ].map(v => (
+                    <button key={v.value} type="button"
+                      className={`${styles.voiceBtn} ${voice === v.value ? styles.voiceActive : ''}`}
+                      onClick={() => setVoice(v.value)}>
+                      <span className={styles.voiceEmoji}>{v.emoji}</span>
+                      <span className={styles.voiceName}>{v.label}</span>
+                      <span className={styles.voiceDesc}>{v.desc}</span>
                     </button>
                   ))}
                 </div>

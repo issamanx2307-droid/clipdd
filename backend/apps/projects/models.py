@@ -9,6 +9,7 @@ class Project(models.Model):
     product_name = models.CharField(max_length=255)
     key_points = models.TextField(blank=True)
     tone = models.CharField(max_length=50, default='urgency')
+    voice = models.CharField(max_length=20, default='nova')  # nova/shimmer/onyx/echo
     template_url = models.URLField(blank=True)
     duration = models.IntegerField(default=15)
     status = models.CharField(max_length=30, choices=STATUS, default='draft')
