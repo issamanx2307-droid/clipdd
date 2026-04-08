@@ -83,9 +83,15 @@ def _template_script(product_name, tone, scene_count=4):
 # ─────────────────────────────────────────────
 
 def generate_voice(text, output_path):
-    from gtts import gTTS
-    tts = gTTS(text=text, lang='th', slow=False)
-    tts.save(output_path)
+    from openai import OpenAI
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="nova",   # nova = สมจริง เหมาะกับภาษาไทย
+        input=text,
+        speed=1.1,      # เร็วขึ้นนิดหน่อยให้ฟังดู energetic แบบ TikTok
+    )
+    response.stream_to_file(output_path)
     return output_path
 
 
