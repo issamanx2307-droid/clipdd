@@ -554,42 +554,16 @@ class AdminCreditsView(APIView):
         except Exception as e:
             result['openai'] = {'status': 'error', 'key_valid': False, 'detail': str(e)}
 
-        # Fal.ai — try multiple known endpoints
+        # Fal.ai — no public balance API, just verify key is configured
         fal_key = settings.FAL_KEY
-        fal_endpoints = [
-            'https://fal.ai/api/billing/credit',
-            'https://rest.alpha.fal.ai/billing/credit',
-            'https://fal.run/v1/billing/credit',
-        ]
-        fal_ok = False
-        for ep in fal_endpoints:
-            try:
-                req = urllib.request.Request(ep, headers={'Authorization': f'Key {fal_key}'})
-                with urllib.request.urlopen(req, timeout=5) as r:
-                    data = json_lib.loads(r.read())
-                    result['fal'] = {'status': 'ok', 'balance': data.get('balance') or data.get('credit'), 'currency': 'USD'}
-                    fal_ok = True
-                    break
-            except Exception:
-                continue
-
-        if not fal_ok:
-            # Verify key is valid by trying a cheap endpoint
-            try:
-                req = urllib.request.Request(
-                    'https://fal.run/fal-ai/flux/schnell',
-                    method='HEAD',
-                    headers={'Authorization': f'Key {fal_key}'}
-                )
-                urllib.request.urlopen(req, timeout=5)
-                result['fal'] = {'status': 'ok', 'key_valid': True, 'note': 'ดู balance ที่ fal.ai/dashboard'}
-            except urllib.error.HTTPError as e:
-                if e.code in (405, 422):  # method not allowed = key valid
-                    result['fal'] = {'status': 'ok', 'key_valid': True, 'note': 'ดู balance ที่ fal.ai/dashboard'}
-                else:
-                    result['fal'] = {'status': 'error', 'key_valid': False, 'detail': f'HTTP {e.code}'}
-            except Exception as e:
-                result['fal'] = {'status': 'error', 'detail': str(e)}
+        if fal_key:
+            result['fal'] = {
+                'status': 'ok',
+                'key_valid': True,
+                'note': 'ดู balance ที่ fal.ai/dashboard/billing',
+            }
+        else:
+            result['fal'] = {'status': 'error', 'key_valid': False, 'detail': 'FAL_KEY ไม่ได้ตั้งค่า'}
 
         # Gemini — no credit API
         result['gemini'] = {

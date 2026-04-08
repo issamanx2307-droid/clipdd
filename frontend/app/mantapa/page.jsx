@@ -103,13 +103,21 @@ function CreditsSection({ token }) {
       <h2 className={styles.sectionTitle}>💳 API Credits</h2>
       <div className={styles.creditsGrid}>
         <CreditCard name="OpenAI" icon="🤖" statusOk={openai.status === 'ok' || openai.status === 'payg'}>
-          {openai.status === 'ok' && <>
-            <div className={styles.creditAmount}>${Number(openai.total_available || 0).toFixed(2)}</div>
+          {openai.status === 'ok' && openai.total_available != null && <>
+            <div className={styles.creditAmount}>${Number(openai.total_available).toFixed(2)}</div>
             <div className={styles.creditDetail}>คงเหลือ / จาก ${Number(openai.total_granted || 0).toFixed(2)}</div>
             <div className={styles.creditBar}>
               <div className={styles.creditBarFill} style={{ width: `${Math.min(100, ((openai.total_available || 0) / (openai.total_granted || 1)) * 100)}%` }} />
             </div>
             <div className={styles.creditUsed}>ใช้ไป ${Number(openai.total_used || 0).toFixed(2)}</div>
+          </>}
+          {openai.status === 'ok' && openai.monthly_usage_usd != null && <>
+            <div className={styles.creditAmount}>${Number(openai.monthly_usage_usd).toFixed(4)}</div>
+            <div className={styles.creditDetail}>ใช้ไปเดือนนี้ ({openai.period})</div>
+          </>}
+          {openai.status === 'ok' && openai.note && openai.total_available == null && openai.monthly_usage_usd == null && <>
+            <div className={styles.creditAmount}>✅</div>
+            <div className={styles.creditDetail}>{openai.note}</div>
           </>}
           {openai.status === 'payg' && <>
             <div className={styles.creditAmount}>{openai.plan}</div>
@@ -119,9 +127,13 @@ function CreditsSection({ token }) {
         </CreditCard>
 
         <CreditCard name="Fal.ai" icon="⚡" statusOk={fal.status === 'ok'}>
-          {fal.status === 'ok' && <>
-            <div className={styles.creditAmount}>${Number(fal.balance || 0).toFixed(2)}</div>
-            <div className={styles.creditDetail}>คงเหลือ ({fal.currency})</div>
+          {fal.status === 'ok' && fal.balance != null && <>
+            <div className={styles.creditAmount}>${Number(fal.balance).toFixed(2)}</div>
+            <div className={styles.creditDetail}>คงเหลือ ({fal.currency || 'USD'})</div>
+          </>}
+          {fal.status === 'ok' && fal.balance == null && <>
+            <div className={styles.creditAmount}>✅</div>
+            <div className={styles.creditDetail}>{fal.note}</div>
           </>}
           {fal.status === 'error' && <div className={styles.creditErr}>{fal.detail}</div>}
         </CreditCard>
