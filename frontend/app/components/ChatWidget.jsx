@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import styles from './ChatWidget.module.css'
 
 function getToken() {
@@ -15,12 +15,39 @@ export default function ChatWidget() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [unread, setUnread] = useState(0)
+  const [humanMode, setHumanMode] = useState(false)
   const bottomRef = useRef(null)
+  const seenMsgIds = useRef(new Set())
   const token = getToken()
 
   useEffect(() => {
     if (open) { setUnread(0); setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100) }
   }, [open, messages])
+
+  // Poll for admin replies
+  const pollAdminReplies = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetch('/api/support/chat/poll/', {
+        headers: { Authorization: `Token ${token}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      setHumanMode(data.human_takeover)
+      const newMsgs = (data.new_messages || []).filter(m => !seenMsgIds.current.has(m.id))
+      if (newMsgs.length > 0) {
+        newMsgs.forEach(m => seenMsgIds.current.add(m.id))
+        setMessages(prev => [...prev, ...newMsgs.map(m => ({ role: 'assistant', content: m.content, fromAdmin: true }))])
+        if (!open) setUnread(n => n + newMsgs.length)
+      }
+    } catch {}
+  }, [token, open])
+
+  useEffect(() => {
+    if (!token) return
+    const iv = setInterval(pollAdminReplies, 5000)
+    return () => clearInterval(iv)
+  }, [pollAdminReplies, token])
 
   async function sendMessage(e) {
     e?.preventDefault()
@@ -33,13 +60,13 @@ export default function ChatWidget() {
     setLoading(true)
 
     try {
-      const history = newMessages.slice(0, -1).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))
       const res = await fetch('/api/support/chat/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Token ${token}` } : {}) },
-        body: JSON.stringify({ message: userMsg, history }),
+        body: JSON.stringify({ message: userMsg }),
       })
       const data = await res.json()
+      setHumanMode(data.human_takeover)
       const reply = data.reply || 'ขออภัย ระบบขัดข้อง กรุณาลองใหม่'
       setMessages(prev => [...prev, { role: 'assistant', content: reply, escalate: data.escalate }])
       if (!open) setUnread(n => n + 1)
@@ -57,11 +84,11 @@ export default function ChatWidget() {
         <div className={styles.window}>
           <div className={styles.header}>
             <div className={styles.headerLeft}>
-              <div className={styles.avatar}>🤖</div>
+              <div className={styles.avatar}>{humanMode ? '👤' : '🤖'}</div>
               <div>
                 <div className={styles.headerName}>ClipDD Assistant</div>
                 <div className={styles.headerStatus}>
-                  <span className={styles.statusDot} /> ออนไลน์
+                  <span className={styles.statusDot} /> {humanMode ? 'ทีมงานกำลังดูแล' : 'ออนไลน์'}
                 </div>
               </div>
             </div>
