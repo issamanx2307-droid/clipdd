@@ -1,5 +1,6 @@
 import './globals.css'
 import ChatWidget from './components/ChatWidget'
+import GoogleProvider from './components/GoogleProvider'
 
 export const metadata = {
   title: 'ClipDD — สร้างคลิปขายของ TikTok อัตโนมัติ',
@@ -16,8 +17,10 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        {children}
-        <ChatWidget />
+        <GoogleProvider>
+          {children}
+          <ChatWidget />
+        </GoogleProvider>
       </body>
     </html>
   )

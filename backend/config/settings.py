@@ -120,6 +120,9 @@ GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 # Admin Panel
 ADMIN_PANEL_PASSWORD = os.environ.get('ADMIN_PANEL_PASSWORD', 'mantapa2025')
 
+# Google OAuth
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
+
 # Cache (Redis) — for IP rate limiting
 CACHES = {
     'default': {

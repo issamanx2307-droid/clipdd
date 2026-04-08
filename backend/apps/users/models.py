@@ -6,6 +6,7 @@ class User(AbstractUser):
     credits = models.IntegerField(default=1)   # ลด free tier เหลือ 1
     plan = models.CharField(max_length=20, default='free')
     fingerprint = models.CharField(max_length=64, blank=True, db_index=True)
+    is_google = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

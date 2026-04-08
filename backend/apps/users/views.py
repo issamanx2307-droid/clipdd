@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.authtoken.models import Token
 from django.core.cache import cache
+from django.conf import settings
 from .serializers import RegisterSerializer, LoginSerializer, UserSerializer
 
 def get_client_ip(request):
@@ -50,3 +51,49 @@ class LogoutView(APIView):
 class MeView(APIView):
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+
+class GoogleAuthView(APIView):
+    """Sign in / sign up with Google (access_token from implicit flow)."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        # Frontend sends email+name from userinfo endpoint
+        email = request.data.get('email', '').strip().lower()
+        name = request.data.get('name', '').strip()
+        access_token = request.data.get('access_token', '').strip()
+
+        if not email or not access_token:
+            return Response({'detail': 'email และ access_token required'}, status=400)
+
+        # Verify the access_token is valid by calling Google userinfo
+        import urllib.request as _urllib
+        import json as _json
+        try:
+            req = _urllib.Request(
+                'https://www.googleapis.com/oauth2/v3/userinfo',
+                headers={'Authorization': f'Bearer {access_token}'}
+            )
+            with _urllib.urlopen(req, timeout=8) as r:
+                info = _json.loads(r.read())
+            # Confirm email matches
+            if info.get('email', '').lower() != email:
+                return Response({'detail': 'email ไม่ตรงกับ token'}, status=400)
+        except Exception as e:
+            return Response({'detail': f'Google token ไม่ถูกต้อง: {str(e)}'}, status=400)
+
+        from .models import User
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={'name': name, 'is_google': True, 'username': email},
+        )
+        if not user.name and name:
+            user.name = name
+            user.save(update_fields=['name'])
+
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'user': UserSerializer(user).data,
+            'created': created,
+        })
