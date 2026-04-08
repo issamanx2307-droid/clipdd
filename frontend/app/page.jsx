@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import styles from './page.module.css'
 
 const STATS = [
@@ -118,6 +118,70 @@ function useInView(ref) {
     return () => observer.disconnect()
   }, [])
   return inView
+}
+
+function VideoDemo({ activeStyle }) {
+  const videoRef = useRef(null)
+  const wrapRef = useRef(null)
+  const [visible, setVisible] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  // Observe when phone enters viewport
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) setVisible(true)
+    }, { threshold: 0.3 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  // When style changes or becomes visible, reload video
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v || !visible) return
+    setLoaded(false)
+    v.load()
+    const onCanPlay = () => { setLoaded(true); v.play().catch(() => {}) }
+    v.addEventListener('canplay', onCanPlay, { once: true })
+    return () => v.removeEventListener('canplay', onCanPlay)
+  }, [activeStyle, visible])
+
+  const STYLE_META = {
+    urgent: { color: '#ff6b35', label: '⚡ เร่งด่วน' },
+    review: { color: '#22c55e', label: '⭐ รีวิว' },
+    drama:  { color: '#9333ea', label: '😱 ดราม่า' },
+    unbox:  { color: '#06b6d4', label: '📦 Unboxing' },
+  }
+  const meta = STYLE_META[activeStyle]
+
+  return (
+    <div ref={wrapRef} className={styles.videoDemoWrap}>
+      {visible && (
+        <video
+          ref={videoRef}
+          key={activeStyle}
+          className={styles.demoVideo}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="none"
+          style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.4s' }}
+        >
+          <source src={`/media/demos/${activeStyle}.mp4`} type="video/mp4" />
+        </video>
+      )}
+      {/* Loading skeleton */}
+      {(!visible || !loaded) && (
+        <div className={styles.videoSkeleton} style={{ background: `linear-gradient(180deg, #111 0%, ${meta.color}22 100%)` }}>
+          <span style={{ fontSize: '2rem' }}>{meta.label}</span>
+          <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>กำลังโหลด...</span>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function AnimSection({ children, className }) {
@@ -246,44 +310,8 @@ export default function Home() {
               <div className={styles.phone}>
                 <div className={styles.phoneNotch} />
                 <div className={styles.phoneScreen}>
-                  {activeStyle === 'urgent' && (
-                    <div className={styles.screenContent}>
-                      <div className={styles.scHook}>⚡ หยุดก่อน!! อย่าเลื่อนผ่าน</div>
-                      <div className={styles.scProduct}>ครีมกันแดด SPF50</div>
-                      <div className={styles.scBody}>ใช้แล้วหน้าไม่ดำ กันแดดติดทนทั้งวัน<br />โปรนี้เหลือแค่วันนี้วันเดียว!!</div>
-                      <div className={styles.scTimer}>⏰ เหลือ 02:47 นาที</div>
-                      <div className={styles.scCta}>กดตะกร้าด่วนเลย!</div>
-                      <div className={styles.scTags}>#กันแดด #ของดีบอกต่อ #TikTokขายของ</div>
-                    </div>
-                  )}
-                  {activeStyle === 'review' && (
-                    <div className={styles.screenContent}>
-                      <div className={styles.scHook}>⭐⭐⭐⭐⭐ รีวิวจริง</div>
-                      <div className={styles.scProduct}>ใช้มาแล้ว 3 เดือน</div>
-                      <div className={styles.scBody}>ก่อนหน้านี้หน้าดำมาก<br />หลังใช้ครีมนี้ผิวสว่างขึ้นชัดเลย<br />ราคาคุ้มมากๆ แนะนำเลย!</div>
-                      <div className={styles.scCta}>ลิงก์อยู่ใน bio นะคะ</div>
-                      <div className={styles.scTags}>#รีวิวสินค้า #ของดี</div>
-                    </div>
-                  )}
-                  {activeStyle === 'drama' && (
-                    <div className={styles.screenContent}>
-                      <div className={styles.scHook}>😱 ทำไมไม่มีใครบอก?!</div>
-                      <div className={styles.scProduct}>ความลับที่พนักงานซ่อนไว้</div>
-                      <div className={styles.scBody}>ฉันเสียเงินไปหมื่นกว่าบาท<br />กับสปาแพงๆ ทั้งที่จริงๆ<br />แค่ตัวนี้ก็พอแล้ว!!</div>
-                      <div className={styles.scCta}>แชร์ก่อนโดนลบ 🔥</div>
-                      <div className={styles.scTags}>#เปิดโปง #ความจริง</div>
-                    </div>
-                  )}
-                  {activeStyle === 'unbox' && (
-                    <div className={styles.screenContent}>
-                      <div className={styles.scHook}>📦 แกะกล่องพัสดุด้วยกัน!</div>
-                      <div className={styles.scProduct}>สั่งมาแล้ว 3 วัน</div>
-                      <div className={styles.scBody}>packaging สวยมาก<br />ของตรงปก คุณภาพดีกว่าที่คิด<br />ราคานี้คุ้มมากจริงๆ</div>
-                      <div className={styles.scCta}>ลองดูสิ คุ้มมาก!</div>
-                      <div className={styles.scTags}>#unboxing #haul #พัสดุมา</div>
-                    </div>
-                  )}
-                  {/* Bottom Bar */}
+                  <VideoDemo activeStyle={activeStyle} />
+                  {/* TikTok sidebar overlay */}
                   <div className={styles.phoneSidebar}>
                     <div className={styles.sideAction}>❤️<br /><span>24.5K</span></div>
                     <div className={styles.sideAction}>💬<br /><span>892</span></div>
