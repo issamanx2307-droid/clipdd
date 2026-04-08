@@ -503,75 +503,99 @@ class AdminAIChatView(APIView):
 
 
 class AdminCreditsView(APIView):
-    """Fetch API credit balances from OpenAI and Fal.ai."""
+    """Fetch API credit/usage info from OpenAI and Fal.ai."""
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
         if not check_admin(request):
             return Response({'detail': 'Unauthorized'}, status=403)
 
+        from datetime import date
         result = {}
 
-        # OpenAI — credit grants (prepaid balance)
+        # OpenAI — verify key + fetch current month usage
         try:
             openai_key = settings.OPENAI_API_KEY
+            # Verify key is valid
             req = urllib.request.Request(
-                'https://api.openai.com/dashboard/billing/credit_grants',
+                'https://api.openai.com/v1/models',
                 headers={'Authorization': f'Bearer {openai_key}'}
             )
             with urllib.request.urlopen(req, timeout=8) as r:
-                data = json_lib.loads(r.read())
-                result['openai'] = {
-                    'total_granted': data.get('total_granted', 0),
-                    'total_used': data.get('total_used', 0),
-                    'total_available': data.get('total_available', 0),
-                    'currency': 'USD',
-                    'status': 'ok',
-                }
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                # Pay-as-you-go: try subscription endpoint
-                try:
-                    req2 = urllib.request.Request(
-                        'https://api.openai.com/dashboard/billing/subscription',
-                        headers={'Authorization': f'Bearer {settings.OPENAI_API_KEY}'}
-                    )
-                    with urllib.request.urlopen(req2, timeout=8) as r2:
-                        data2 = json_lib.loads(r2.read())
-                        result['openai'] = {
-                            'plan': data2.get('plan', {}).get('title', 'Pay-as-you-go'),
-                            'hard_limit_usd': data2.get('hard_limit_usd'),
-                            'soft_limit_usd': data2.get('soft_limit_usd'),
-                            'status': 'payg',
-                        }
-                except Exception as e2:
-                    result['openai'] = {'status': 'error', 'detail': str(e2)}
-            else:
-                result['openai'] = {'status': 'error', 'detail': str(e)}
-        except Exception as e:
-            result['openai'] = {'status': 'error', 'detail': str(e)}
+                pass  # 200 = key valid
 
-        # Fal.ai — user profile/balance
-        try:
-            fal_key = settings.FAL_KEY
-            req = urllib.request.Request(
-                'https://rest.alpha.fal.ai/v1/user/balance',
-                headers={'Authorization': f'Key {fal_key}'}
+            # Fetch current month usage
+            today = date.today()
+            start = today.replace(day=1).strftime('%Y-%m-%d')
+            end = today.strftime('%Y-%m-%d')
+            req2 = urllib.request.Request(
+                f'https://api.openai.com/dashboard/billing/usage?start_date={start}&end_date={end}',
+                headers={'Authorization': f'Bearer {openai_key}'}
             )
-            with urllib.request.urlopen(req, timeout=8) as r:
-                data = json_lib.loads(r.read())
-                result['fal'] = {'balance': data.get('balance'), 'currency': 'USD', 'status': 'ok'}
-        except urllib.error.HTTPError as e:
-            body = e.read().decode() if hasattr(e, 'read') else ''
-            result['fal'] = {'status': 'error', 'detail': f'HTTP {e.code}', 'body': body[:200]}
-        except Exception as e:
-            result['fal'] = {'status': 'error', 'detail': str(e)}
+            try:
+                with urllib.request.urlopen(req2, timeout=8) as r2:
+                    usage_data = json_lib.loads(r2.read())
+                    total_usage_cents = usage_data.get('total_usage', 0)
+                    result['openai'] = {
+                        'status': 'ok',
+                        'key_valid': True,
+                        'monthly_usage_usd': round(total_usage_cents / 100, 4),
+                        'period': f'{start} – {end}',
+                    }
+            except Exception:
+                result['openai'] = {
+                    'status': 'ok',
+                    'key_valid': True,
+                    'note': 'API Key ใช้งานได้ (ดู usage ที่ platform.openai.com/usage)',
+                }
 
-        # Gemini — no credit API, return config info
+        except urllib.error.HTTPError as e:
+            result['openai'] = {'status': 'error', 'key_valid': False, 'detail': f'HTTP {e.code}'}
+        except Exception as e:
+            result['openai'] = {'status': 'error', 'key_valid': False, 'detail': str(e)}
+
+        # Fal.ai — try multiple known endpoints
+        fal_key = settings.FAL_KEY
+        fal_endpoints = [
+            'https://fal.ai/api/billing/credit',
+            'https://rest.alpha.fal.ai/billing/credit',
+            'https://fal.run/v1/billing/credit',
+        ]
+        fal_ok = False
+        for ep in fal_endpoints:
+            try:
+                req = urllib.request.Request(ep, headers={'Authorization': f'Key {fal_key}'})
+                with urllib.request.urlopen(req, timeout=5) as r:
+                    data = json_lib.loads(r.read())
+                    result['fal'] = {'status': 'ok', 'balance': data.get('balance') or data.get('credit'), 'currency': 'USD'}
+                    fal_ok = True
+                    break
+            except Exception:
+                continue
+
+        if not fal_ok:
+            # Verify key is valid by trying a cheap endpoint
+            try:
+                req = urllib.request.Request(
+                    'https://fal.run/fal-ai/flux/schnell',
+                    method='HEAD',
+                    headers={'Authorization': f'Key {fal_key}'}
+                )
+                urllib.request.urlopen(req, timeout=5)
+                result['fal'] = {'status': 'ok', 'key_valid': True, 'note': 'ดู balance ที่ fal.ai/dashboard'}
+            except urllib.error.HTTPError as e:
+                if e.code in (405, 422):  # method not allowed = key valid
+                    result['fal'] = {'status': 'ok', 'key_valid': True, 'note': 'ดู balance ที่ fal.ai/dashboard'}
+                else:
+                    result['fal'] = {'status': 'error', 'key_valid': False, 'detail': f'HTTP {e.code}'}
+            except Exception as e:
+                result['fal'] = {'status': 'error', 'detail': str(e)}
+
+        # Gemini — no credit API
         result['gemini'] = {
             'model': 'gemini-2.0-flash',
             'status': 'active',
-            'note': 'Google AI ไม่มี balance API',
+            'note': 'ไม่มี Balance API — ดูที่ aistudio.google.com',
         }
 
         return Response(result)
