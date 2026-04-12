@@ -1,9 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  // Allow images from any domain
   images: {
-    domains: ['localhost', 'clipdd.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'fal.media' },
+      { protocol: 'https', hostname: '*.fal.media' },
+      { protocol: 'https', hostname: 'v3.fal.media' },
+      { protocol: 'https', hostname: 'storage.googleapis.com' },
+      { protocol: 'http',  hostname: 'localhost' },
+      { protocol: 'https', hostname: 'clipdd.com' },
+    ],
   },
 }
 

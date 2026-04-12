@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'corsheaders',
     'apps.users',
     'apps.projects',
     'apps.scripts',
@@ -29,6 +30,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -69,10 +71,12 @@ DATABASES = {
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
-CELERY_TASK_QUEUES = {
-    'default': {},
-    'video': {},
-}
+from kombu import Queue
+CELERY_TASK_QUEUES = (
+    Queue('default'),
+    Queue('video'),
+)
+CELERY_TASK_DEFAULT_QUEUE = 'default'
 
 # Auth
 AUTH_USER_MODEL = 'users.User'
@@ -130,6 +134,14 @@ CACHES = {
         'LOCATION': REDIS_URL,
     }
 }
+
+# CORS — allow Next.js frontend (same-origin via nginx, but needed in dev)
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'https://clipdd.com',
+    'https://www.clipdd.com',
+]
+CORS_ALLOW_CREDENTIALS = True
 
 # Storage (MinIO / S3)
 USE_S3 = os.environ.get('USE_S3', 'False') == 'True'

@@ -74,8 +74,7 @@
 /* ── HERO ── */
 .hero {
   position: relative;
-  padding: 90px 24px 0;
-  text-align: center;
+  padding: 70px 40px 0;
   overflow: hidden;
 }
 .heroGlow {
@@ -99,7 +98,85 @@
   pointer-events: none;
   animation: glow 6s ease-in-out infinite reverse;
 }
-.heroInner { position: relative; max-width: 800px; margin: 0 auto; }
+/* 2-column hero layout */
+.heroLayout {
+  position: relative;
+  max-width: 1140px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 56px;
+  align-items: center;
+  padding-bottom: 60px;
+}
+.heroLeft {
+  text-align: left;
+}
+.heroRight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+}
+
+/* Inline stats (desktop) */
+.heroInlineStats {
+  display: flex;
+  gap: 28px;
+  margin-top: 36px;
+  flex-wrap: wrap;
+}
+.heroStatItem { display: flex; flex-direction: column; gap: 2px; }
+.heroStatValue { font-size: 1.3rem; font-weight: 900; color: var(--text); letter-spacing: -0.5px; }
+.heroStatLabel { font-size: 0.72rem; color: var(--muted); }
+
+/* Mobile stats bar (hidden desktop) */
+.statsBarMobile { display: none; }
+
+/* Style tabs under phone */
+.heroStyleTabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 320px;
+}
+.heroStyleTab {
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.heroStyleTab:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.heroStyleTabActive { background: rgba(255,45,85,0.08) !important; color: #ff6b35 !important; }
+
+@media (max-width: 860px) {
+  .heroLayout {
+    grid-template-columns: 1fr;
+    padding: 0 0 40px;
+    gap: 40px;
+  }
+  .heroLeft { text-align: center; }
+  .heroInlineStats { justify-content: center; display: none; }
+  .statsBarMobile {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+  }
+  .heroRight { order: -1; }
+  .hero { padding: 60px 20px 0; }
+  .heroCta { justify-content: center; }
+}
 
 .badge {
   display: inline-flex;
@@ -148,8 +225,8 @@
 .heroDesc {
   font-size: 1.05rem;
   color: var(--muted);
-  margin: 24px auto 36px;
-  max-width: 560px;
+  margin: 24px 0 36px;
+  max-width: 520px;
   line-height: 1.7;
   animation: slideUp 0.7s ease;
 }
@@ -179,19 +256,19 @@
 .input:focus { border-color: rgba(255,45,85,0.6); background: rgba(255,255,255,0.07); }
 
 .heroCta {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   background: linear-gradient(135deg, #ff2d55, #ff6b35);
   color: #fff;
-  padding: 16px 26px;
+  padding: 16px 28px;
   border-radius: 14px;
   font-weight: 700;
   font-size: 0.95rem;
   white-space: nowrap;
   transition: opacity 0.2s, transform 0.2s;
   box-shadow: 0 8px 32px rgba(255,45,85,0.4);
-  flex-shrink: 0;
+  margin-bottom: 12px;
 }
 .heroCta:hover { opacity: 0.92; transform: translateY(-2px); }
 
@@ -201,12 +278,14 @@
   animation: fadeIn 1s ease;
 }
 
-/* STATS BAR */
-.statsBar {
+/* STATS BAR — shown only on mobile via .statsBarMobile */
+.statsBar { display: none; }
+
+/* Section stats bar (pricing, features areas) */
+.statsBarSection {
   display: flex;
   justify-content: center;
   gap: 0;
-  margin-top: 64px;
   border-top: 1px solid rgba(255,255,255,0.06);
   background: rgba(255,255,255,0.02);
   backdrop-filter: blur(8px);
@@ -749,3 +828,23 @@
   .featureGrid { grid-template-columns: 1fr; }
   .finalTrust { flex-direction: column; gap: 10px; }
 }
+
+.soundBtn {
+  position: absolute;
+  bottom: 52px;
+  right: 10px;
+  z-index: 10;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #fff;
+  font-size: 1.1rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.soundBtn:hover { background: rgba(0,0,0,0.8); }

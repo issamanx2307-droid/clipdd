@@ -44,7 +44,10 @@ class LoginView(APIView):
 
 class LogoutView(APIView):
     def post(self, request):
-        request.user.auth_token.delete()
+        try:
+            request.user.auth_token.delete()
+        except Exception:
+            pass
         return Response({'detail': 'ออกจากระบบแล้ว'})
 
 

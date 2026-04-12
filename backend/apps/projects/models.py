@@ -3,7 +3,7 @@ from apps.users.models import User
 
 
 class Project(models.Model):
-    STATUS = [('draft','Draft'),('generating_images','Generating Images'),('awaiting_selection','Awaiting Selection'),('generating_video','Generating Video'),('done','Done'),('failed','Failed')]
+    STATUS = [('draft','Draft'),('generating_script','Generating Script'),('awaiting_script_approval','Awaiting Script Approval'),('generating_video','Generating Video'),('done','Done'),('failed','Failed')]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects')
     name = models.CharField(max_length=255)
     product_name = models.CharField(max_length=255)
@@ -12,6 +12,8 @@ class Project(models.Model):
     voice = models.CharField(max_length=20, default='nova')  # nova/shimmer/onyx/echo
     template_url = models.URLField(blank=True)
     duration = models.IntegerField(default=15)
+    include_person = models.BooleanField(default=True)
+    extra_requirements = models.TextField(blank=True)   # True = Flux generates human using product
     status = models.CharField(max_length=30, choices=STATUS, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -21,8 +23,10 @@ class Project(models.Model):
 
 class ProductImage(models.Model):
     """Images uploaded by user as reference."""
+    IMAGE_TYPES = [('product', 'Product'), ('person', 'Person')]
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='uploaded_images')
     image = models.ImageField(upload_to='uploads/')
+    image_type = models.CharField(max_length=20, choices=IMAGE_TYPES, default='product')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
 

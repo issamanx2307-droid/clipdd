@@ -14,10 +14,10 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_fingerprint(self, value):
         if value and User.objects.filter(fingerprint=value).exists():
             raise serializers.ValidationError('อุปกรณ์นี้เคยสมัครแล้ว')
-        return value
+        return value or None   # เก็บ None แทน empty string เพื่อให้ unique รองรับได้
 
     def create(self, validated_data):
-        fingerprint = validated_data.pop('fingerprint', '')
+        fingerprint = validated_data.pop('fingerprint', None)
         user = User.objects.create_user(
             username=validated_data['email'],
             email=validated_data['email'],

@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     ChatView, ChatPollView,
     AdminDashboardView, AdminChatListView, AdminChatDetailView, AdminReleaseChatView,
-    AdminAIChatView, AdminCreditsView,
+    AdminAIChatView, AdminCreditsView, AdminDemoClipView,
 )
 
 urlpatterns = [
@@ -14,4 +14,5 @@ urlpatterns = [
     path('admin-api/chats/<int:session_id>/release/', AdminReleaseChatView.as_view()),
     path('admin-api/ai-chat/', AdminAIChatView.as_view()),
     path('admin-api/credits/', AdminCreditsView.as_view()),
+    path('admin-api/demo-clips/', AdminDemoClipView.as_view()),
 ]

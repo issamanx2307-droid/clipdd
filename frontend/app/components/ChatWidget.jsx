@@ -2,12 +2,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import styles from './ChatWidget.module.css'
 
-function getToken() {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('cd_token')
-}
-
 export default function ChatWidget() {
+  const [hydrated, setHydrated] = useState(false)
+  const [token, setToken] = useState(null)
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'สวัสดีครับ 👋 มีอะไรให้ช่วยไหม? ถามเรื่องการใช้งาน, เช็ค status, หรือแก้ไข prompt ได้เลย' }
@@ -18,11 +15,23 @@ export default function ChatWidget() {
   const [humanMode, setHumanMode] = useState(false)
   const bottomRef = useRef(null)
   const seenMsgIds = useRef(new Set())
-  const token = getToken()
+
+  // Read token client-side only — widget is hidden for guests
+  useEffect(() => {
+    const syncToken = () => {
+      setToken(localStorage.getItem('cd_token'))
+      setHydrated(true)
+    }
+
+    syncToken()
+    window.addEventListener('storage', syncToken)
+    return () => window.removeEventListener('storage', syncToken)
+  }, [])
 
   useEffect(() => {
+    if (!token) return
     if (open) { setUnread(0); setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100) }
-  }, [open, messages])
+  }, [open, messages, token])
 
   // Poll for admin replies
   const pollAdminReplies = useCallback(async () => {
@@ -51,7 +60,7 @@ export default function ChatWidget() {
 
   async function sendMessage(e) {
     e?.preventDefault()
-    if (!input.trim() || loading) return
+    if (!token || !input.trim() || loading) return
 
     const userMsg = input.trim()
     setInput('')
@@ -77,6 +86,8 @@ export default function ChatWidget() {
     }
   }
 
+  if (!hydrated || !token) return null
+
   return (
     <>
       {/* Chat Window */}
@@ -88,8 +99,13 @@ export default function ChatWidget() {
               <div>
                 <div className={styles.headerName}>ClipDD Assistant</div>
                 <div className={styles.headerStatus}>
-                  <span className={styles.statusDot} /> {humanMode ? 'ทีมงานกำลังดูแล' : 'ออนไลน์'}
+                  <span className={styles.statusDot} /> {humanMode ? 'ทีมงานกำลังดูแล' : 'ออนไลน์ · ตอบทันที'}
                 </div>
+                {!humanMode && (
+                  <div className={styles.headerDesc}>
+                    ถามเรื่องการใช้งาน · เช็ค status คลิป · แก้ไข prompt
+                  </div>
+                )}
               </div>
             </div>
             <button className={styles.closeBtn} onClick={() => setOpen(false)}>✕</button>

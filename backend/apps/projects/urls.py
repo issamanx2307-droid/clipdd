@@ -1,13 +1,13 @@
 from django.urls import path
 from .views import (
     ProjectListCreateView, ProjectDetailView,
-    RegenerateImagesView, SelectImageView, ProjectImagesView,
+    ScriptPreviewView, ApproveScriptView, RedoVideoView,
 )
 
 urlpatterns = [
     path('projects/', ProjectListCreateView.as_view(), name='project-list'),
     path('projects/<int:pk>/', ProjectDetailView.as_view(), name='project-detail'),
-    path('projects/<int:project_id>/images/', ProjectImagesView.as_view(), name='project-images'),
-    path('projects/<int:project_id>/regenerate/', RegenerateImagesView.as_view(), name='project-regenerate'),
-    path('projects/<int:project_id>/select-image/', SelectImageView.as_view(), name='project-select-image'),
+    path('projects/<int:project_id>/script/', ScriptPreviewView.as_view(), name='project-script'),
+    path('projects/<int:project_id>/approve-script/', ApproveScriptView.as_view(), name='project-approve-script'),
+    path('projects/<int:project_id>/redo/', RedoVideoView.as_view(), name='project-redo'),
 ]

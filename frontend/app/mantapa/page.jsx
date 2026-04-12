@@ -371,6 +371,126 @@ function ChatList({ token, onSelect }) {
 }
 
 // ──────────────────────────────────────────────
+// Demo Clips Upload
+// ──────────────────────────────────────────────
+const DEMO_SLOTS = [
+  { id: 'urgent', label: '⚡ เร่งด่วน',  desc: 'Flash Sale / FOMO สูง',     spot: 'Hero + Demo section' },
+  { id: 'review', label: '⭐ รีวิว',     desc: 'น่าเชื่อถือ มืออาชีพ',       spot: 'Hero + Demo section' },
+  { id: 'drama',  label: '😱 ดราม่า',   desc: 'Before/After อารมณ์แรง',    spot: 'Hero + Demo section' },
+  { id: 'unbox',  label: '📦 Unboxing', desc: 'แกะกล่อง reveal',           spot: 'Hero + Demo section' },
+]
+
+function DemoClipsSection({ token }) {
+  const [clips, setClips] = useState({})
+  const [uploading, setUploading] = useState(null)   // slot id being uploaded
+  const [msg, setMsg] = useState(null)               // { type:'ok'|'err', text }
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/admin-api/demo-clips/`, { headers: { 'X-Admin-Token': token } })
+      if (res.ok) setClips(await res.json())
+    } catch {}
+  }, [token])
+
+  useEffect(() => { load() }, [load])
+
+  async function upload(slot, file) {
+    if (!file) return
+    setUploading(slot)
+    setMsg(null)
+    const fd = new FormData()
+    fd.append('slot', slot)
+    fd.append('file', file)
+    try {
+      const res = await fetch(`${API}/admin-api/demo-clips/`, {
+        method: 'POST',
+        headers: { 'X-Admin-Token': token },
+        body: fd,
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setMsg({ type: 'ok', text: `✅ ${data.slot} อัปโหลดสำเร็จ (${data.size_kb} KB)` })
+        load()
+      } else {
+        setMsg({ type: 'err', text: `❌ ${data.detail}` })
+      }
+    } catch (e) {
+      setMsg({ type: 'err', text: `❌ เชื่อมต่อไม่ได้` })
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  function fmt(ts) {
+    if (!ts) return ''
+    return new Date(ts * 1000).toLocaleString('th-TH', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+  }
+
+  return (
+    <div className={styles.demoClipsSection}>
+      <div className={styles.demoClipsHeader}>
+        <h2 className={styles.sectionTitle}>🎬 Demo Clips</h2>
+        <p className={styles.demoClipsNote}>คลิปที่แสดงในหน้า Landing Page (Hero + Demo Section) — อัปโหลด .mp4 เพื่อแทนที่</p>
+      </div>
+
+      {msg && (
+        <div className={`${styles.demoMsg} ${msg.type === 'ok' ? styles.demoMsgOk : styles.demoMsgErr}`}>
+          {msg.text}
+        </div>
+      )}
+
+      <div className={styles.demoClipsGrid}>
+        {DEMO_SLOTS.map(slot => {
+          const info = clips[slot.id] || {}
+          const isUploading = uploading === slot.id
+          return (
+            <div key={slot.id} className={styles.demoClipCard}>
+              <div className={styles.demoClipTop}>
+                <span className={styles.demoClipLabel}>{slot.label}</span>
+                <span className={styles.demoClipDesc}>{slot.desc}</span>
+              </div>
+
+              {/* Preview */}
+              {info.exists ? (
+                <video
+                  key={info.updated_ts}
+                  src={`${info.url}?t=${info.updated_ts}`}
+                  className={styles.demoClipPreview}
+                  muted autoPlay loop playsInline
+                />
+              ) : (
+                <div className={styles.demoClipEmpty}>ยังไม่มีคลิป</div>
+              )}
+
+              {/* Info */}
+              <div className={styles.demoClipInfo}>
+                {info.exists && <>
+                  <span>{info.size_kb} KB</span>
+                  <span>{fmt(info.updated_ts)}</span>
+                </>}
+                <span className={styles.demoClipSpot}>{slot.spot}</span>
+              </div>
+
+              {/* Upload */}
+              <label className={`${styles.demoUploadBtn} ${isUploading ? styles.demoUploadBtnLoading : ''}`}>
+                {isUploading ? '⏳ กำลังอัปโหลด...' : '📤 อัปโหลดคลิปใหม่'}
+                <input
+                  type="file"
+                  accept="video/mp4"
+                  style={{ display: 'none' }}
+                  disabled={!!uploading}
+                  onChange={e => upload(slot.id, e.target.files?.[0])}
+                />
+              </label>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────
 // Dashboard
 // ──────────────────────────────────────────────
 function Dashboard({ token }) {
@@ -390,6 +510,7 @@ function Dashboard({ token }) {
     { key: 'dashboard', label: '📊 Dashboard' },
     { key: 'chats', label: '💬 Chats', badge: stats?.chats_unread },
     { key: 'credits', label: '💳 Credits' },
+    { key: 'demos', label: '🎬 Demo Clips' },
   ]
 
   return (
@@ -447,6 +568,12 @@ function Dashboard({ token }) {
       {tab === 'credits' && (
         <div className={styles.content}>
           <CreditsSection token={token} />
+        </div>
+      )}
+
+      {tab === 'demos' && (
+        <div className={styles.content}>
+          <DemoClipsSection token={token} />
         </div>
       )}
 

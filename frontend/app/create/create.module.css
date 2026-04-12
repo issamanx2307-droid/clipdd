@@ -433,3 +433,210 @@
 .voiceName { font-size: 0.88rem; font-weight: 700; color: var(--text); }
 .voiceDesc { font-size: 0.68rem; color: var(--muted); line-height: 1.4; }
 @media (max-width: 480px) { .voiceGrid { grid-template-columns: repeat(2, 1fr); } }
+
+/* 4-column tone grid */
+.toneGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 480px) { .toneGrid { grid-template-columns: repeat(2, 1fr); } }
+
+/* Upload row (2 slots side by side) */
+.uploadRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 480px) { .uploadRow { grid-template-columns: 1fr; } }
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.checkboxRow input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--red);
+}
+
+.uploadSlot { display: flex; flex-direction: column; gap: 6px; }
+.uploadSlotLabel { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+
+.uploadEmpty {
+  border: 2px dashed rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 20px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: rgba(255,255,255,0.02);
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.uploadEmpty:hover { border-color: rgba(255,45,85,0.4); background: rgba(255,45,85,0.03); }
+.uploadEmptyIcon { font-size: 1.6rem; }
+.uploadEmptyText { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+.uploadEmptyHint { font-size: 0.72rem; color: var(--muted); }
+
+.uploadPreview {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid rgba(255,45,85,0.4);
+  cursor: pointer;
+  min-height: 100px;
+}
+.uploadPreviewImg {
+  width: 100%; height: 120px;
+  object-fit: cover; display: block;
+}
+.uploadRemove {
+  position: absolute; top: 6px; right: 6px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(255,45,85,0.9); border: none; color: #fff;
+  font-size: 0.65rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.uploadChangeHint {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.6);
+  color: rgba(255,255,255,0.7);
+  font-size: 0.7rem;
+  text-align: center;
+  padding: 4px;
+}
+
+.uploadHintRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.uploadHintRow span {
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: rgba(255,255,255,0.04);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.labelOptional {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* Script review section */
+.scriptSection {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.scriptSectionTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.scriptHint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+/* Editable field */
+.editField {
+  margin-bottom: 14px;
+}
+.editField:last-child { margin-bottom: 0; }
+.editFieldHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.editFieldLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.editFieldCount {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.editValue {
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 42px;
+  line-height: 1.5;
+}
+.editValue:hover {
+  border-color: rgba(255,45,85,0.4);
+  background: rgba(255,45,85,0.03);
+}
+.editPencil {
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.4;
+  font-size: 0.75rem;
+}
+.editPlaceholder { color: var(--muted); font-style: italic; }
+.editInput, .editTextarea {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid var(--red);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+  resize: none;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+.editHint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Script preview */
+.scriptPreview {
+  background: rgba(255,45,85,0.05);
+  border: 1px solid rgba(255,45,85,0.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.scriptPreviewLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255,45,85,0.8);
+  margin-bottom: 6px;
+}
+.scriptPreviewText {
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.6;
+}

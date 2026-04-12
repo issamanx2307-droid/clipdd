@@ -81,7 +81,7 @@ const PLANS = [
     desc: 'ไม่ต้องใส่บัตรเครดิต',
     features: ['3 คลิป ฟรีทันที', 'ทุกสไตล์', 'เสียงพากย์ AI', 'ดาวน์โหลดได้'],
     cta: 'เริ่มฟรีเลย',
-    href: '/create',
+    href: '/register',
     highlight: false,
   },
   {
@@ -125,6 +125,7 @@ function VideoDemo({ activeStyle }) {
   const wrapRef = useRef(null)
   const [visible, setVisible] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [muted, setMuted] = useState(true)
 
   // Observe when phone enters viewport
   useEffect(() => {
@@ -164,7 +165,7 @@ function VideoDemo({ activeStyle }) {
           key={activeStyle}
           className={styles.demoVideo}
           autoPlay
-          muted
+          muted={muted}
           loop
           playsInline
           preload="none"
@@ -180,6 +181,19 @@ function VideoDemo({ activeStyle }) {
           <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>กำลังโหลด...</span>
         </div>
       )}
+      <button
+        className={styles.soundBtn}
+        onClick={() => {
+          setMuted(m => !m)
+          if (videoRef.current) {
+            videoRef.current.muted = !videoRef.current.muted
+            if (!videoRef.current.muted) videoRef.current.play().catch(() => {})
+          }
+        }}
+        title={muted ? 'เปิดเสียง' : 'ปิดเสียง'}
+      >
+        {muted ? '🔇' : '🔊'}
+      </button>
     </div>
   )
 }
@@ -195,12 +209,21 @@ function AnimSection({ children, className }) {
 }
 
 export default function Home() {
-  const [product, setProduct] = useState('')
   const [activeStyle, setActiveStyle] = useState('urgent')
   const [tIndex, setTIndex] = useState(0)
 
   useEffect(() => {
     const iv = setInterval(() => setTIndex(i => (i + 1) % TESTIMONIALS.length), 4000)
+    return () => clearInterval(iv)
+  }, [])
+
+  // Auto-cycle styles in hero
+  useEffect(() => {
+    const ids = STYLES.map(s => s.id)
+    const iv = setInterval(() => setActiveStyle(s => {
+      const i = ids.indexOf(s)
+      return ids[(i + 1) % ids.length]
+    }), 3500)
     return () => clearInterval(iv)
   }, [])
 
@@ -218,7 +241,7 @@ export default function Home() {
           <a href="#how" className={styles.navLink}>วิธีใช้</a>
           <a href="#pricing" className={styles.navLink}>ราคา</a>
         </div>
-        <a href="/create" className={styles.navCta}>ทดลองฟรี</a>
+        <a href="/register" className={styles.navCta}>สมัครฟรี</a>
       </nav>
 
       {/* ── HERO ── */}
@@ -226,46 +249,76 @@ export default function Home() {
         <div className={styles.heroGlow} />
         <div className={styles.heroGlow2} />
 
-        <AnimSection className={styles.heroInner}>
-          <div className={styles.badge}>
-            <span className={styles.badgeDot} />
-            🔥 มีร้านค้าใช้งานแล้ว 1,000+ ร้าน
-          </div>
+        <div className={styles.heroLayout}>
+          {/* LEFT — copy */}
+          <AnimSection className={styles.heroLeft}>
+            <div className={styles.badge}>
+              <span className={styles.badgeDot} />
+              🔥 มีร้านค้าใช้งานแล้ว 1,000+ ร้าน
+            </div>
 
-          <h1 className={styles.heroTitle}>
-            สร้างคลิปขายของ<br />
-            <span className={styles.heroGradientText}>TikTok อัตโนมัติ</span><br />
-            <span className={styles.heroSub2}>ด้วย AI ใน 60 วินาที</span>
-          </h1>
+            <h1 className={styles.heroTitle}>
+              สร้างคลิปขายของ<br />
+              <span className={styles.heroGradientText}>TikTok อัตโนมัติ</span><br />
+              <span className={styles.heroSub2}>ด้วย AI ใน 60 วินาที</span>
+            </h1>
 
-          <p className={styles.heroDesc}>
-            แค่พิมพ์ชื่อสินค้า — AI เขียนสคริปต์ไวรัล + พากย์เสียง + ตัดต่อวิดีโอให้อัตโนมัติ<br />
-            <strong>ไม่ต้องมีทักษะตัดต่อ</strong> · <strong>ไม่ต้องจ้างช่างวิดีโอ</strong>
-          </p>
+            <p className={styles.heroDesc}>
+              ใส่สินค้า → AI เขียนสคริปต์ไวรัล + พากย์เสียง + ตัดต่อวิดีโอให้อัตโนมัติ<br />
+              <strong>ไม่ต้องมีทักษะตัดต่อ</strong> · <strong>ไม่ต้องจ้างช่างวิดีโอ</strong>
+            </p>
 
-          <div className={styles.heroInputWrap}>
-            <input
-              className={styles.input}
-              placeholder="เช่น: ครีมกันแดด SPF50 ราคา 290 บาท..."
-              value={product}
-              onChange={e => setProduct(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && (window.location.href = `/create${product ? `?product=${encodeURIComponent(product)}` : ''}`)}
-            />
-            <a
-              href={`/create${product ? `?product=${encodeURIComponent(product)}` : ''}`}
-              className={styles.heroCta}
-            >
-              <span>ทดลองสร้างฟรี 3 คลิป</span>
+            <a href="/register" className={styles.heroCta}>
+              <span>สมัครฟรี — ทดลองสร้าง 1 คลิป</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </a>
-          </div>
-          <p className={styles.heroNote}>✓ ไม่ต้องใส่บัตรเครดิต &nbsp;·&nbsp; ✓ เริ่มได้ทันที &nbsp;·&nbsp; ✓ ฟรี 3 คลิปแรก</p>
-        </AnimSection>
+            <p className={styles.heroNote}>✓ ไม่ต้องใส่บัตรเครดิต &nbsp;·&nbsp; ✓ เริ่มได้ทันที &nbsp;·&nbsp; ✓ ฟรี 1 คลิปแรก</p>
 
-        {/* STATS BAR */}
-        <div className={styles.statsBar}>
+            {/* inline stats on desktop */}
+            <div className={styles.heroInlineStats}>
+              {STATS.map(s => (
+                <div key={s.label} className={styles.heroStatItem}>
+                  <span className={styles.heroStatValue}>{s.value}</span>
+                  <span className={styles.heroStatLabel}>{s.label}</span>
+                </div>
+              ))}
+            </div>
+          </AnimSection>
+
+          {/* RIGHT — phone with live demo */}
+          <div className={styles.heroRight}>
+            <div className={styles.phoneGlow} />
+            <div className={styles.phone}>
+              <div className={styles.phoneNotch} />
+              <div className={styles.phoneScreen}>
+                <VideoDemo activeStyle={activeStyle} />
+                <div className={styles.phoneSidebar}>
+                  <div className={styles.sideAction}>❤️<br /><span>24.5K</span></div>
+                  <div className={styles.sideAction}>💬<br /><span>892</span></div>
+                  <div className={styles.sideAction}>↗️<br /><span>แชร์</span></div>
+                </div>
+              </div>
+            </div>
+            {/* Style tabs under phone */}
+            <div className={styles.heroStyleTabs}>
+              {STYLES.map(s => (
+                <button
+                  key={s.id}
+                  className={`${styles.heroStyleTab} ${activeStyle === s.id ? styles.heroStyleTabActive : ''}`}
+                  style={activeStyle === s.id ? { borderColor: s.color, color: s.color } : {}}
+                  onClick={() => setActiveStyle(s.id)}
+                >
+                  {s.icon} {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* STATS BAR — mobile only (hidden on desktop, shown inline above) */}
+        <div className={styles.statsBarMobile}>
           {STATS.map(s => (
             <div key={s.label} className={styles.statItem}>
               <span className={styles.statValue}>{s.value}</span>
@@ -337,7 +390,7 @@ export default function Home() {
                   </div>
                 </div>
               ))}
-              <a href="/create" className={styles.demoCtaBtn}>
+              <a href="/register" className={styles.demoCtaBtn}>
                 ลองสร้างคลิปฟรีเลย →
               </a>
             </div>
@@ -476,7 +529,7 @@ export default function Home() {
           <p className={styles.finalDesc}>
             เริ่มต้นฟรี ไม่ต้องใส่บัตรเครดิต ทดลองสร้าง 3 คลิปแรกได้เลยทันที
           </p>
-          <a href="/create" className={styles.finalBtn}>
+          <a href="/register" className={styles.finalBtn}>
             เริ่มสร้างคลิปฟรีเลย →
           </a>
           <div className={styles.finalTrust}>
@@ -487,6 +540,56 @@ export default function Home() {
         </AnimSection>
       </section>
 
+      {/* ── SEO Structured Data ── */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "SoftwareApplication",
+              "name": "ClipDD",
+              "url": "https://clipdd.com",
+              "applicationCategory": "MultimediaApplication",
+              "operatingSystem": "Web",
+              "description": "AI สร้างคลิปขายของ TikTok อัตโนมัติ — สคริปต์ เสียงพากย์ไทย ภาพ ตัดต่อ ใน 1 นาที",
+              "offers": [
+                { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "THB", "description": "3 คลิปฟรี" },
+                { "@type": "Offer", "name": "Pro", "price": "299", "priceCurrency": "THB", "description": "ไม่จำกัดคลิป/เดือน" }
+              ],
+              "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.8", "ratingCount": "120" }
+            },
+            {
+              "@type": "Organization",
+              "name": "ClipDD",
+              "url": "https://clipdd.com",
+              "logo": "https://clipdd.com/logo.png",
+              "sameAs": []
+            },
+            {
+              "@type": "FAQPage",
+              "mainEntity": [
+                {
+                  "@type": "Question",
+                  "name": "ClipDD คืออะไร?",
+                  "acceptedAnswer": { "@type": "Answer", "text": "ClipDD คือบริการ AI ที่สร้างคลิปขายของ TikTok อัตโนมัติ ตั้งแต่สคริปต์ เสียงพากย์ไทย ภาพสินค้า จนถึงตัดต่อ ทั้งหมดใน 1 นาที" }
+                },
+                {
+                  "@type": "Question",
+                  "name": "ใช้ฟรีได้ไหม?",
+                  "acceptedAnswer": { "@type": "Answer", "text": "ได้เลย สมัครฟรีได้ 3 คลิปแรก ไม่ต้องใส่บัตรเครดิต" }
+                },
+                {
+                  "@type": "Question",
+                  "name": "คลิปที่ได้ใช้โพสต์ TikTok ได้เลยไหม?",
+                  "acceptedAnswer": { "@type": "Answer", "text": "ได้เลย ไฟล์ MP4 ขนาด 9:16 พร้อมโพสต์ TikTok, Reels, Shorts ทันที" }
+                }
+              ]
+            }
+          ]
+        })}}
+      />
+
       {/* ── FOOTER ── */}
       <footer className={styles.footer}>
         <div className={styles.footerTop}>
@@ -495,13 +598,14 @@ export default function Home() {
             <p className={styles.footerTagline}>AI สร้างคลิปขายของ TikTok อัตโนมัติ</p>
           </div>
           <div className={styles.footerLinks}>
-            <a href="/create" className={styles.footerLink}>เริ่มใช้งาน</a>
+            <a href="/register" className={styles.footerLink}>เริ่มใช้งาน</a>
             <a href="#pricing" className={styles.footerLink}>ราคา</a>
-            <a href="/contact" className={styles.footerLink}>ติดต่อ</a>
+            <a href="/terms" className={styles.footerLink}>ข้อกำหนด</a>
+            <a href="/privacy" className={styles.footerLink}>ความเป็นส่วนตัว</a>
           </div>
         </div>
         <div className={styles.footerBottom}>
-          <span>© 2025 ClipDD · All rights reserved</span>
+          <span>© 2025 ClipDD · All rights reserved · <a href="/terms" style={{color:'inherit',opacity:0.6}}>Terms</a> · <a href="/privacy" style={{color:'inherit',opacity:0.6}}>Privacy</a></span>
         </div>
       </footer>
     </main>
