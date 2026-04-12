@@ -4,6 +4,7 @@ from rest_framework import status, permissions
 from rest_framework.authtoken.models import Token
 from django.core.cache import cache
 from django.conf import settings
+from django.db import IntegrityError
 from .serializers import RegisterSerializer, LoginSerializer, UserSerializer
 
 def get_client_ip(request):
@@ -96,10 +97,17 @@ class GoogleAuthView(APIView):
                 )
             cache.set(cache_key, count + 1, 86400)
 
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={'name': name, 'is_google': True, 'username': email},
-        )
+        try:
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={'name': name, 'is_google': True, 'username': email},
+            )
+        except IntegrityError:
+            # Concurrent Google sign-ups: unique email / username wins once; fetch the row.
+            user = User.objects.filter(email=email).first() or User.objects.filter(username=email).first()
+            if not user:
+                raise
+            created = False
         if not user.name and name:
             user.name = name
             user.save(update_fields=['name'])

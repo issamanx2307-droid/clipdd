@@ -7,7 +7,7 @@ import requests
 from pathlib import Path
 from celery import shared_task
 from django.conf import settings
-from .utils import normalize_script_data, _template_script
+from .utils import normalize_script_data, _template_script, absolute_media_url
 
 logger = logging.getLogger(__name__)
 
@@ -695,7 +695,7 @@ def assemble_video_task(self, project_id, kling_video_url):
     project   = Project.objects.get(pk=project_id)
     try:
         render_job = project.render_job
-    except Exception:
+    except RenderJob.DoesNotExist:
         logger.error(f"assemble_video_task: no RenderJob for project {project_id}, aborting.")
         return f"No RenderJob for project {project_id}"
 
@@ -790,8 +790,8 @@ def assemble_video_task(self, project_id, kling_video_url):
         VideoOutput.objects.update_or_create(
             project=project,
             defaults={
-                'video_url': f'/media/videos/project_{project_id}.mp4',
-                'audio_url': f'/media/audio/project_{project_id}.mp3',
+                'video_url': absolute_media_url(f'/media/videos/project_{project_id}.mp4'),
+                'audio_url': absolute_media_url(f'/media/audio/project_{project_id}.mp3'),
                 'duration':  target_duration,
             }
         )

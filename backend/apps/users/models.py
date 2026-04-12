@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
-    email = models.EmailField(unique=True)
+    email = models.EmailField('email address', unique=True)
     name = models.CharField(max_length=255, blank=True)
     credits = models.IntegerField(default=1)   # ลด free tier เหลือ 1
     plan = models.CharField(max_length=20, default='free')

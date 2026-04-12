@@ -5,14 +5,15 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from .models import RenderJob, VideoOutput
 from apps.projects.models import Project
+from .utils import absolute_media_url
 
 logger = logging.getLogger(__name__)
 
 
 class RenderStatusView(APIView):
-    def get(self, request, project_id):
+    def get(self, request, pk):
         try:
-            project = Project.objects.get(pk=project_id, user=request.user)
+            project = Project.objects.get(pk=pk, user=request.user)
         except Project.DoesNotExist:
             return Response({'detail': 'ไม่พบโปรเจค'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -28,11 +29,12 @@ class RenderStatusView(APIView):
 
         try:
             output = project.video
-            data['video_url'] = output.video_url
-            data['audio_url'] = output.audio_url
+            data['video_url'] = absolute_media_url(output.video_url)
+            data['audio_url'] = absolute_media_url(output.audio_url)
             data['duration']  = output.duration
         except VideoOutput.DoesNotExist:
             data['video_url'] = None
+            data['audio_url'] = None
         try:
             data['hashtags'] = (project.render_job.script_data or {}).get('hashtags', [])
         except RenderJob.DoesNotExist:

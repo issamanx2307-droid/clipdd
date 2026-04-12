@@ -93,3 +93,20 @@ def normalize_script_data(script_data, duration, product_name=''):
             'hashtags': hashtags,
         },
     }
+
+
+def absolute_media_url(url):
+    """
+    If url is relative (/media/...), prefix settings.SITE_URL.
+    Already-absolute http(s) URLs are returned unchanged.
+    """
+    from django.conf import settings
+
+    if not url:
+        return None
+    url = str(url).strip()
+    if url.startswith(('http://', 'https://')):
+        return url
+    base = getattr(settings, 'SITE_URL', 'https://clipdd.com').rstrip('/')
+    path = url if url.startswith('/') else f'/{url}'
+    return f'{base}{path}'

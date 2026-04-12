@@ -7,9 +7,9 @@ from apps.projects.models import Project
 
 
 class ProjectScriptView(APIView):
-    def get(self, request, project_id):
+    def get(self, request, pk):
         try:
-            project = Project.objects.get(pk=project_id, user=request.user)
+            project = Project.objects.get(pk=pk, user=request.user)
             script = project.script
             return Response(ScriptSerializer(script).data)
         except Project.DoesNotExist:

@@ -9,6 +9,9 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# Public site origin (no trailing slash) — absolute media URLs for API / Celery
+SITE_URL = os.environ.get('SITE_URL', 'https://clipdd.com').rstrip('/')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

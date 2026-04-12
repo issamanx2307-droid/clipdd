@@ -4,7 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Project, ProductImage, GeneratedImage
 from .serializers import ProjectSerializer, CreateProjectSerializer, GeneratedImageSerializer
-from apps.video_engine.tasks import generate_script_task, generate_video_task, normalize_script_data
+from apps.video_engine.tasks import generate_script_task, generate_video_task
+from apps.video_engine.utils import normalize_script_data
 
 
 class ProjectListCreateView(generics.ListCreateAPIView):
@@ -49,9 +50,9 @@ class ProjectDetailView(generics.RetrieveAPIView):
 class ScriptPreviewView(APIView):
     """Return current script data for user to review/edit."""
 
-    def get(self, request, project_id):
+    def get(self, request, pk):
         try:
-            project = Project.objects.get(pk=project_id, user=request.user)
+            project = Project.objects.get(pk=pk, user=request.user)
         except Project.DoesNotExist:
             return Response({'detail': 'ไม่พบโปรเจค'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -69,9 +70,9 @@ class ScriptPreviewView(APIView):
 class ApproveScriptView(APIView):
     """User approves (and optionally edits) the AI script, then video generation starts."""
 
-    def post(self, request, project_id):
+    def post(self, request, pk):
         try:
-            project = Project.objects.get(pk=project_id, user=request.user)
+            project = Project.objects.get(pk=pk, user=request.user)
         except Project.DoesNotExist:
             return Response({'detail': 'ไม่พบโปรเจค'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -113,9 +114,9 @@ class ApproveScriptView(APIView):
 class RedoVideoView(APIView):
     """Re-trigger video generation (back to script approval step)."""
 
-    def post(self, request, project_id):
+    def post(self, request, pk):
         try:
-            project = Project.objects.get(pk=project_id, user=request.user)
+            project = Project.objects.get(pk=pk, user=request.user)
         except Project.DoesNotExist:
             return Response({'detail': 'ไม่พบโปรเจค'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -131,9 +132,9 @@ class RedoVideoView(APIView):
 class ProjectImagesView(APIView):
     """Legacy endpoint kept for compatibility."""
 
-    def get(self, request, project_id):
+    def get(self, request, pk):
         try:
-            project = Project.objects.get(pk=project_id, user=request.user)
+            project = Project.objects.get(pk=pk, user=request.user)
         except Project.DoesNotExist:
             return Response({'detail': 'ไม่พบโปรเจค'}, status=status.HTTP_404_NOT_FOUND)
 

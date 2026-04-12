@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.conf import settings
 from django.utils import timezone
+from apps.video_engine.utils import absolute_media_url
 from .models import ChatSession, ChatMessage
 
 logger = logging.getLogger(__name__)
@@ -104,8 +105,10 @@ def call_user_function(name, args, user):
             d = {"id": p.id, "product": p.product_name, "status": p.status}
             try: d["progress"] = p.render_job.progress; d["error"] = p.render_job.error
             except: pass
-            try: d["video_url"] = p.video.video_url
-            except: pass
+            try:
+                d["video_url"] = absolute_media_url(p.video.video_url)
+            except Exception:
+                pass
             return d
         except Project.DoesNotExist:
             return {"error": "ไม่พบโปรเจค"}
@@ -345,11 +348,21 @@ class ChatPollView(APIView):
 # ADMIN VIEWS
 # ─────────────────────────────────────────────
 
-ADMIN_PASSWORD = settings.ADMIN_PANEL_PASSWORD
+ADMIN_PASSWORD = getattr(settings, 'ADMIN_PANEL_PASSWORD', '') or ''
 
 def check_admin(request):
-    token = request.headers.get('X-Admin-Token', '')
-    return secrets.compare_digest(token, ADMIN_PASSWORD)
+    """
+    Admin auth via X-Admin-Token. Token is still sent in the header (visible on HTTPS
+    only to TLS); use compare_digest to avoid timing leaks vs plain ==.
+    """
+    correct = ADMIN_PASSWORD
+    if not correct:
+        return False
+    token = request.headers.get('X-Admin-Token') or ''
+    try:
+        return secrets.compare_digest(token, correct)
+    except (TypeError, ValueError):
+        return False
 
 
 class AdminDashboardView(APIView):

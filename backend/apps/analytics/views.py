@@ -6,9 +6,9 @@ from apps.projects.models import Project
 
 
 class AnalyticsView(APIView):
-    def get(self, request, project_id):
+    def get(self, request, pk):
         try:
-            project = Project.objects.get(pk=project_id, user=request.user)
+            project = Project.objects.get(pk=pk, user=request.user)
             analytics, _ = Analytics.objects.get_or_create(project=project)
             return Response({
                 'views': analytics.views,

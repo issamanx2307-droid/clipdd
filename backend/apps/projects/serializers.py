@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.video_engine.utils import absolute_media_url
 from .models import Project, GeneratedImage
 
 
@@ -23,13 +24,13 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def get_video_url(self, obj):
         try:
-            return obj.video.video_url
+            return absolute_media_url(obj.video.video_url)
         except Exception:
             return None
 
     def get_audio_url(self, obj):
         try:
-            return obj.video.audio_url
+            return absolute_media_url(obj.video.audio_url)
         except Exception:
             return None
 
