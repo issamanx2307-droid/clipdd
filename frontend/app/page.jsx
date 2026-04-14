@@ -241,6 +241,7 @@ export default function Home() {
           <a href="#how" className={styles.navLink}>วิธีใช้</a>
           <a href="#pricing" className={styles.navLink}>ราคา</a>
         </div>
+        <a href="/login" className={styles.navLink}>เข้าสู่ระบบ</a>
         <a href="/register" className={styles.navCta}>สมัครฟรี</a>
       </nav>
 
