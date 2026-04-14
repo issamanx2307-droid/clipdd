@@ -130,6 +130,40 @@ function AnimSection({ children, className }) {
   )
 }
 
+function ClipCard({ thumb }) {
+  const vidRef = useRef(null)
+  const [playing, setPlaying] = useState(false)
+  const isVideo = thumb?.file_type === 'video'
+
+  function play() {
+    const v = vidRef.current; if (!v) return
+    v.play().then(() => setPlaying(true)).catch(() => {})
+  }
+  function stop() {
+    const v = vidRef.current; if (!v) return
+    v.pause(); v.currentTime = 0; setPlaying(false)
+  }
+
+  return (
+    <a href="/clips" className={styles.clipCard}
+      onMouseEnter={isVideo ? play : undefined}
+      onMouseLeave={isVideo ? stop : undefined}
+      onClick={isVideo ? (e) => { e.preventDefault(); playing ? stop() : play() } : undefined}>
+      <div className={styles.clipThumb}>
+        {!thumb && <div className={styles.clipThumbPlaceholder} />}
+        {thumb && !isVideo && <img src={thumb.file_url} alt={thumb.title} className={styles.clipThumbImg} />}
+        {thumb && isVideo && <>
+          <div className={styles.clipThumbPlaceholder} style={{ opacity: playing ? 0 : 1, position:'absolute', inset:0, background:'#111' }} />
+          <video ref={vidRef} src={thumb.file_url} className={styles.clipThumbImg}
+            style={{ opacity: playing ? 1 : 0, transition:'opacity .3s', position:'absolute', inset:0 }}
+            muted loop playsInline preload="none" />
+          {!playing && <span className={styles.clipPlayIcon}>▶</span>}
+        </>}
+      </div>
+    </a>
+  )
+}
+
 export default function Home() {
   const [activeStyle, setActiveStyle] = useState('all')
   const [hero, setHero] = useState(DEFAULT_HERO)
@@ -260,19 +294,7 @@ export default function Home() {
           </div>
           <div className={styles.clipsGrid}>
             {(displayThumbs.length > 0 ? displayThumbs : Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => null)).map((thumb, i) => (
-              <a key={thumb?.id ?? i} href="/clips" className={styles.clipCard}>
-                <div className={styles.clipThumb}>
-                  {thumb
-                    ? <img src={thumb.image_url} alt={thumb.title} className={styles.clipThumbImg} />
-                    : <div className={styles.clipThumbPlaceholder} />
-                  }
-                </div>
-                {thumb?.title && (
-                  <div className={styles.clipBody}>
-                    <p className={styles.clipTitle}>{thumb.title}</p>
-                  </div>
-                )}
-              </a>
+              <ClipCard key={thumb?.id ?? i} thumb={thumb} />
             ))}
           </div>
         </div>

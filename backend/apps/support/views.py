@@ -875,7 +875,8 @@ class PublicClipThumbnailView(APIView):
         items = ClipThumbnail.objects.all()
         return Response([{
             'id': t.id,
-            'image_url': _thumbnail_url(t.image_path),
+            'file_url': _thumbnail_url(t.image_path),
+            'file_type': t.file_type,
             'title': t.title,
             'category': t.category,
             'order': t.order,
@@ -892,7 +893,8 @@ class AdminClipThumbnailView(APIView):
         items = ClipThumbnail.objects.all()
         return Response([{
             'id': t.id,
-            'image_url': _thumbnail_url(t.image_path),
+            'file_url': _thumbnail_url(t.image_path),
+            'file_type': t.file_type,
             'title': t.title,
             'category': t.category,
             'order': t.order,
@@ -902,38 +904,41 @@ class AdminClipThumbnailView(APIView):
     def post(self, request):
         if not check_admin(request):
             return Response({'detail': 'Unauthorized'}, status=403)
-        img = request.FILES.get('image')
-        if not img:
-            return Response({'detail': 'ต้องแนบไฟล์ image'}, status=400)
+        upload = request.FILES.get('image')
+        if not upload:
+            return Response({'detail': 'ต้องแนบไฟล์'}, status=400)
 
-        # Validate type
-        ct = img.content_type or ''
-        if not ct.startswith('image/'):
-            return Response({'detail': 'ไฟล์ต้องเป็นรูปภาพ'}, status=400)
+        ct = upload.content_type or ''
+        if ct.startswith('video/'):
+            file_type = 'video'
+        elif ct.startswith('image/'):
+            file_type = 'image'
+        else:
+            return Response({'detail': 'รองรับเฉพาะวิดีโอ (mp4/mov/webm) และรูปภาพ (jpg/png/gif/webp)'}, status=400)
 
-        # Save file
-        import uuid, os
-        ext = Path(img.name).suffix.lower() or '.jpg'
+        import uuid
+        ext = Path(upload.name).suffix.lower() or ('.mp4' if file_type == 'video' else '.jpg')
         filename = f"{uuid.uuid4().hex}{ext}"
         dest_dir = Path(settings.MEDIA_ROOT) / 'clip_thumbnails'
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest = dest_dir / filename
         with open(dest, 'wb') as f:
-            for chunk in img.chunks():
+            for chunk in upload.chunks():
                 f.write(chunk)
 
         image_path = f'clip_thumbnails/{filename}'
         t = ClipThumbnail.objects.create(
             image_path=image_path,
+            file_type=file_type,
             title=request.data.get('title', '').strip(),
             category=request.data.get('category', '').strip(),
             order=int(request.data.get('order', 0) or 0),
         )
         return Response({
             'id': t.id,
-            'image_url': _thumbnail_url(t.image_path),
+            'file_url': _thumbnail_url(t.image_path),
+            'file_type': t.file_type,
             'title': t.title,
-            'category': t.category,
         }, status=201)
 
     def delete(self, request):

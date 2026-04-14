@@ -16,8 +16,9 @@ class SiteContent(models.Model):
 
 class ClipThumbnail(models.Model):
     image_path = models.CharField(max_length=300)   # relative to MEDIA_ROOT
+    file_type  = models.CharField(max_length=10, default='image')  # 'image' | 'video'
     title      = models.CharField(max_length=200, blank=True)
-    category   = models.CharField(max_length=80,  blank=True)  # urgent/review/drama/unbox/market
+    category   = models.CharField(max_length=80,  blank=True)
     order      = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 

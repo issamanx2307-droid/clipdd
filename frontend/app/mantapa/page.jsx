@@ -727,11 +727,12 @@ function ThumbnailManager({ token }) {
 
       <form className={styles.thumbUploadForm} onSubmit={upload}>
         <div className={styles.thumbUploadRow}>
-          <input ref={fileRef} type="file" accept="image/*" className={styles.thumbFileInput} required />
+          <input ref={fileRef} type="file" accept="video/mp4,video/mov,video/webm,video/quicktime,image/jpeg,image/png,image/gif,image/webp" className={styles.thumbFileInput} required />
           <button className={styles.thumbUploadBtn} type="submit" disabled={uploading}>
             {uploading ? 'กำลังอัป...' : '+ อัปโหลด'}
           </button>
         </div>
+        <p className={styles.thumbFormatHint}>วิดีโอ: MP4 · MOV · WEBM &nbsp;|&nbsp; รูปภาพ: JPG · PNG · GIF · WEBP</p>
       </form>
 
       <div className={styles.thumbCount}>{items.length} / 20 รูป</div>
@@ -743,7 +744,13 @@ function ThumbnailManager({ token }) {
           )}
           {items.map(t => (
             <div key={t.id} className={styles.thumbItem}>
-              <img src={t.image_url} alt="" className={styles.thumbItemImg} />
+              {t.file_type === 'video'
+                ? <video src={t.file_url} className={styles.thumbItemImg} muted playsInline preload="metadata" />
+                : <img src={t.file_url} alt="" className={styles.thumbItemImg} />
+              }
+              <div className={styles.thumbItemInfo}>
+                <span className={styles.thumbItemCat}>{t.file_type === 'video' ? '🎬 วิดีโอ' : '🖼️ รูปภาพ'}</span>
+              </div>
               <button className={styles.thumbDeleteBtn} onClick={() => del(t.id)} title="ลบ">🗑️</button>
             </div>
           ))}
