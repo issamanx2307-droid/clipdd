@@ -642,67 +642,47 @@ class AdminCreditsView(APIView):
         except Exception as e:
             result['openai'] = {'status': 'error', 'key_valid': False, 'detail': str(e)}
 
-        # Fal.ai — validate key via models endpoint, try to read balance
+        # Fal.ai — live account check via actual Kling endpoint
+        # GET to the queue endpoint: 403 = locked/bad key, 4xx/5xx other = account OK
         fal_key = getattr(settings, 'FAL_KEY', '')
         if fal_key:
-            balance = None
-            # Try user/billing endpoints (fal.ai doesn't expose a public balance API,
-            # but we attempt known candidates and fall back gracefully)
-            for fal_url in [
-                'https://fal.run/v1/me',
-                'https://rest.fal.run/v1/me',
-            ]:
+            LIVE_CHECK_URL = 'https://queue.fal.run/fal-ai/kling-video/v2/master/image-to-video'
+            LOCK_KEYWORDS = ('locked', 'exhausted', 'billing', 'insufficient', 'payment required')
+            try:
+                req_live = urllib.request.Request(
+                    LIVE_CHECK_URL,
+                    headers={'Authorization': f'Key {fal_key}'},
+                )
                 try:
-                    req_fal = urllib.request.Request(
-                        fal_url,
-                        headers={'Authorization': f'Key {fal_key}'},
-                    )
-                    with urllib.request.urlopen(req_fal, timeout=5) as rf:
-                        fal_data = json_lib.loads(rf.read())
-                        balance = fal_data.get('balance') or fal_data.get('credits')
-                    break
+                    urllib.request.urlopen(req_live, timeout=6)
+                    # 200 = account OK (unlikely for GET but handle it)
+                    result['fal'] = {'status': 'ok', 'key_valid': True, 'balance': None,
+                                     'note': 'ดู balance ที่ fal.ai/dashboard/billing'}
                 except urllib.error.HTTPError as e:
-                    if e.code in (401, 403):
-                        result['fal'] = {'status': 'error', 'key_valid': False, 'detail': f'Key ไม่ถูกต้อง (HTTP {e.code})'}
-                        break
-                    # 404/other = endpoint doesn't exist, try next
-                except Exception:
-                    pass
+                    body = ''
+                    try:
+                        body = e.read().decode('utf-8', errors='ignore').lower()
+                    except Exception:
+                        pass
+                    if e.code == 403 and any(kw in body for kw in LOCK_KEYWORDS):
+                        # Account locked — extract readable message
+                        import re as _re
+                        match = _re.search(r'reason["\s:]+([^"\.]+)', body)
+                        reason = match.group(1).strip().capitalize() if match else 'Account locked / Exhausted balance'
+                        result['fal'] = {
+                            'status': 'error', 'key_valid': True, 'balance': None,
+                            'detail': f'Fal.ai ถูกล็อค: {reason} — เติมเงินที่ fal.ai/dashboard/billing',
+                        }
+                    elif e.code in (401,):
+                        result['fal'] = {'status': 'error', 'key_valid': False,
+                                         'detail': f'FAL_KEY ไม่ถูกต้อง (HTTP {e.code})'}
+                    else:
+                        # 404, 405, 422 etc. = endpoint responded = account is accessible
+                        result['fal'] = {'status': 'ok', 'key_valid': True, 'balance': None,
+                                         'note': 'ดู balance ที่ fal.ai/dashboard/billing'}
+            except Exception as e:
+                result['fal'] = {'status': 'error', 'key_valid': False, 'detail': f'เชื่อมต่อ Fal.ai ไม่ได้: {e}'}
 
-            if 'fal' not in result:
-                # Balance API unavailable — check recent RenderJob failures for
-                # exhausted-balance / locked-account error strings from Kling/Fal
-                fal_error_msg = None
-                EXHAUSTED_KEYWORDS = ('exhausted', 'locked', 'billing', 'insufficient', 'quota exceeded', 'payment')
-                try:
-                    from datetime import timedelta
-                    cutoff = timezone.now() - timedelta(days=7)
-                    failed_jobs = RenderJob.objects.filter(
-                        status='failed',
-                        created_at__gte=cutoff,
-                    ).exclude(error='').order_by('-created_at').values_list('error', flat=True)[:20]
-                    for err_text in failed_jobs:
-                        if any(kw in err_text.lower() for kw in EXHAUSTED_KEYWORDS):
-                            fal_error_msg = err_text[:200]
-                            break
-                except Exception:
-                    pass
-
-                if fal_error_msg:
-                    result['fal'] = {
-                        'status': 'error',
-                        'key_valid': True,
-                        'balance': None,
-                        'detail': f'พบข้อผิดพลาดจาก Fal.ai: {fal_error_msg}',
-                        'note': 'ดู balance ที่ fal.ai/dashboard/billing',
-                    }
-                else:
-                    result['fal'] = {
-                        'status': 'ok',
-                        'key_valid': True,
-                        'balance': balance,   # None if API unavailable
-                        'note': 'ดู balance ที่ fal.ai/dashboard/billing',
-                    }
         else:
             result['fal'] = {'status': 'error', 'key_valid': False, 'detail': 'FAL_KEY ไม่ได้ตั้งค่า'}
 
