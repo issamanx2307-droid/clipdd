@@ -68,11 +68,20 @@ function StatCard({ icon, label, value, sub, accent }) {
 function CreditsSection({ token }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState(null)
 
   const load = useCallback(async () => {
+    setLoading(true); setErr(null)
     try {
       const res = await fetch(`${API}/admin-api/credits/`, { headers: { 'X-Admin-Token': token } })
-      if (res.ok) setData(await res.json())
+      if (res.ok) {
+        setData(await res.json())
+      } else {
+        const body = await res.text()
+        setErr(`HTTP ${res.status}: ${body.slice(0, 120)}`)
+      }
+    } catch (e) {
+      setErr(`เชื่อมต่อไม่ได้: ${e.message}`)
     } finally { setLoading(false) }
   }, [token])
 
@@ -92,7 +101,22 @@ function CreditsSection({ token }) {
   }
 
   if (loading) return <div className={styles.loading}>กำลังดึง API Credits...</div>
-  if (!data) return null
+  if (err) return (
+    <div className={styles.creditsSection}>
+      <h2 className={styles.sectionTitle}>💳 API Credits</h2>
+      <div className={styles.creditErrBox}>
+        ❌ โหลดข้อมูลไม่ได้: {err}
+        <button className={styles.refreshBtn} onClick={load} style={{ marginTop: 12 }}>↻ ลองใหม่</button>
+      </div>
+    </div>
+  )
+  if (!data) return (
+    <div className={styles.creditsSection}>
+      <h2 className={styles.sectionTitle}>💳 API Credits</h2>
+      <div className={styles.loading}>ไม่มีข้อมูล — ตรวจสอบ token หรือ server logs</div>
+      <button className={styles.refreshBtn} onClick={load}>↻ ลองใหม่</button>
+    </div>
+  )
 
   const openai = data.openai || {}
   const fal = data.fal || {}
