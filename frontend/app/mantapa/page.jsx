@@ -127,26 +127,23 @@ function CreditsSection({ token }) {
     <div className={styles.creditsSection}>
       <h2 className={styles.sectionTitle}>💳 API Credits</h2>
       <div className={styles.creditsGrid}>
-        <CreditCard name="OpenAI" icon="🤖" statusOk={openai.status === 'ok' || openai.status === 'payg'}>
-          {openai.status === 'ok' && openai.total_available != null && <>
-            <div className={styles.creditAmount}>${Number(openai.total_available).toFixed(2)}</div>
-            <div className={styles.creditDetail}>คงเหลือ / จาก ${Number(openai.total_granted || 0).toFixed(2)}</div>
+        <CreditCard name="OpenAI" icon="🤖" statusOk={openai.status === 'ok'}>
+          {openai.status === 'ok' && openai.remaining_usd != null && <>
+            <div className={styles.creditAmount}>${Number(openai.remaining_usd).toFixed(2)}</div>
+            <div className={styles.creditDetail}>คงเหลือ / จาก ${Number(openai.hard_limit_usd).toFixed(2)}</div>
             <div className={styles.creditBar}>
-              <div className={styles.creditBarFill} style={{ width: `${Math.min(100, ((openai.total_available || 0) / (openai.total_granted || 1)) * 100)}%` }} />
+              <div className={styles.creditBarFill} style={{ width: `${Math.min(100, (openai.remaining_usd / (openai.hard_limit_usd || 1)) * 100)}%` }} />
             </div>
-            <div className={styles.creditUsed}>ใช้ไป ${Number(openai.total_used || 0).toFixed(2)}</div>
+            <div className={styles.creditUsed}>ใช้ไปเดือนนี้ ${Number(openai.monthly_usage_usd || 0).toFixed(4)}</div>
           </>}
-          {openai.status === 'ok' && openai.monthly_usage_usd != null && <>
+          {openai.status === 'ok' && openai.remaining_usd == null && openai.monthly_usage_usd != null && <>
             <div className={styles.creditAmount}>${Number(openai.monthly_usage_usd).toFixed(4)}</div>
             <div className={styles.creditDetail}>ใช้ไปเดือนนี้ ({openai.period})</div>
+            <div className={styles.creditDetail} style={{ marginTop: 4, fontSize: 11, opacity: 0.7 }}>ดูยอดคงเหลือที่ platform.openai.com</div>
           </>}
-          {openai.status === 'ok' && openai.note && openai.total_available == null && openai.monthly_usage_usd == null && <>
+          {openai.status === 'ok' && openai.remaining_usd == null && openai.monthly_usage_usd == null && <>
             <div className={styles.creditAmount}>✅</div>
             <div className={styles.creditDetail}>{openai.note}</div>
-          </>}
-          {openai.status === 'payg' && <>
-            <div className={styles.creditAmount}>{openai.plan}</div>
-            <div className={styles.creditDetail}>Limit ${openai.hard_limit_usd} / ${openai.soft_limit_usd} soft</div>
           </>}
           {openai.status === 'error' && <div className={styles.creditErr}>{openai.detail}</div>}
         </CreditCard>

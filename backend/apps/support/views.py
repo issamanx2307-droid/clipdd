@@ -581,10 +581,11 @@ class AdminCreditsView(APIView):
         from datetime import date
         result = {}
 
-        # OpenAI — verify key + fetch current month usage
+        # OpenAI — verify key + billing subscription + current month usage
         try:
-            openai_key = settings.OPENAI_API_KEY
-            # Verify key is valid
+            openai_key = getattr(settings, 'OPENAI_API_KEY', '')
+            if not openai_key:
+                raise ValueError('OPENAI_API_KEY ไม่ได้ตั้งค่า')
             req = urllib.request.Request(
                 'https://api.openai.com/v1/models',
                 headers={'Authorization': f'Bearer {openai_key}'}
@@ -592,58 +593,86 @@ class AdminCreditsView(APIView):
             with urllib.request.urlopen(req, timeout=8) as r:
                 pass  # 200 = key valid
 
-            # Fetch current month usage
             today = date.today()
             start = today.replace(day=1).strftime('%Y-%m-%d')
             end = today.strftime('%Y-%m-%d')
-            req2 = urllib.request.Request(
-                f'https://api.openai.com/dashboard/billing/usage?start_date={start}&end_date={end}',
-                headers={'Authorization': f'Bearer {openai_key}'}
-            )
+
+            # Subscription (credit limit)
+            sub_data = {}
             try:
-                with urllib.request.urlopen(req2, timeout=8) as r2:
-                    usage_data = json_lib.loads(r2.read())
-                    total_usage_cents = usage_data.get('total_usage', 0)
-                    result['openai'] = {
-                        'status': 'ok',
-                        'key_valid': True,
-                        'monthly_usage_usd': round(total_usage_cents / 100, 4),
-                        'period': f'{start} – {end}',
-                    }
+                req_sub = urllib.request.Request(
+                    'https://api.openai.com/dashboard/billing/subscription',
+                    headers={'Authorization': f'Bearer {openai_key}'}
+                )
+                with urllib.request.urlopen(req_sub, timeout=8) as rs:
+                    sub_data = json_lib.loads(rs.read())
             except Exception:
-                result['openai'] = {
-                    'status': 'ok',
-                    'key_valid': True,
-                    'note': 'API Key ใช้งานได้ (ดู usage ที่ platform.openai.com/usage)',
-                }
+                pass
+
+            # Monthly usage
+            usage_usd = None
+            try:
+                req_usage = urllib.request.Request(
+                    f'https://api.openai.com/dashboard/billing/usage?start_date={start}&end_date={end}',
+                    headers={'Authorization': f'Bearer {openai_key}'}
+                )
+                with urllib.request.urlopen(req_usage, timeout=8) as r2:
+                    usage_data = json_lib.loads(r2.read())
+                    usage_usd = round(usage_data.get('total_usage', 0) / 100, 4)
+            except Exception:
+                pass
+
+            hard_limit = sub_data.get('hard_limit_usd')
+            r = {'status': 'ok', 'key_valid': True}
+            if usage_usd is not None:
+                r['monthly_usage_usd'] = usage_usd
+                r['period'] = f'{start} – {end}'
+            if hard_limit:
+                r['hard_limit_usd'] = round(float(hard_limit), 2)
+                if usage_usd is not None:
+                    r['remaining_usd'] = round(float(hard_limit) - usage_usd, 4)
+            if usage_usd is None and not hard_limit:
+                r['note'] = 'API Key ใช้งานได้ (ดู usage ที่ platform.openai.com/usage)'
+            result['openai'] = r
 
         except urllib.error.HTTPError as e:
             result['openai'] = {'status': 'error', 'key_valid': False, 'detail': f'HTTP {e.code}'}
         except Exception as e:
             result['openai'] = {'status': 'error', 'key_valid': False, 'detail': str(e)}
 
-        # Fal.ai — try to fetch balance from API
+        # Fal.ai — validate key via models endpoint, try to read balance
         fal_key = getattr(settings, 'FAL_KEY', '')
         if fal_key:
-            try:
-                req_fal = urllib.request.Request(
-                    'https://rest.alpha.fal.ai/v1/me',
-                    headers={'Authorization': f'Key {fal_key}'},
-                )
-                with urllib.request.urlopen(req_fal, timeout=6) as rf:
-                    fal_data = json_lib.loads(rf.read())
-                    balance = fal_data.get('balance') or fal_data.get('credits')
-                    result['fal'] = {
-                        'status': 'ok',
-                        'key_valid': True,
-                        'balance': balance,
-                        'note': 'ดู balance เพิ่มเติมที่ fal.ai/dashboard/billing',
-                    }
-            except Exception:
+            balance = None
+            # Try user/billing endpoints (fal.ai doesn't expose a public balance API,
+            # but we attempt known candidates and fall back gracefully)
+            for fal_url in [
+                'https://fal.run/v1/me',
+                'https://rest.fal.run/v1/me',
+            ]:
+                try:
+                    req_fal = urllib.request.Request(
+                        fal_url,
+                        headers={'Authorization': f'Key {fal_key}'},
+                    )
+                    with urllib.request.urlopen(req_fal, timeout=5) as rf:
+                        fal_data = json_lib.loads(rf.read())
+                        balance = fal_data.get('balance') or fal_data.get('credits')
+                    break
+                except urllib.error.HTTPError as e:
+                    if e.code in (401, 403):
+                        result['fal'] = {'status': 'error', 'key_valid': False, 'detail': f'Key ไม่ถูกต้อง (HTTP {e.code})'}
+                        break
+                    # 404/other = endpoint doesn't exist, try next
+                except Exception:
+                    pass
+
+            if 'fal' not in result:
                 result['fal'] = {
                     'status': 'ok',
                     'key_valid': True,
-                    'note': 'Key ใช้งานได้ — ดู balance ที่ fal.ai/dashboard/billing',
+                    'balance': balance,
+                    'note': 'ดู balance ที่ fal.ai/dashboard/billing',
                 }
         else:
             result['fal'] = {'status': 'error', 'key_valid': False, 'detail': 'FAL_KEY ไม่ได้ตั้งค่า'}
