@@ -1108,6 +1108,29 @@ function Dashboard({ token }) {
               </div>
             </div>
           )}
+          {stats?.recent_failures?.length > 0 && (
+            <div className={styles.statusSection}>
+              <h2 className={styles.sectionTitle}>🚨 Failed Projects ล่าสุด</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {stats.recent_failures.map(f => (
+                  <div key={f.id} style={{
+                    background: 'rgba(220,38,38,.08)', border: '1px solid rgba(220,38,38,.3)',
+                    borderRadius: 10, padding: '10px 14px',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700, color: '#fca5a5', fontSize: '0.85rem' }}>
+                        #{f.id} · {f.product}
+                      </span>
+                      <span style={{ color: '#64748b', fontSize: '0.75rem' }}>{f.created_at} · {f.user}</span>
+                    </div>
+                    <div style={{ color: '#fca5a5', fontSize: '0.8rem', opacity: 0.85, wordBreak: 'break-all' }}>
+                      {f.error || '(ไม่มีข้อความ error)'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

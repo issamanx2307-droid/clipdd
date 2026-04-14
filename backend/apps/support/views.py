@@ -410,9 +410,32 @@ class AdminDashboardView(APIView):
 
         from apps.users.models import User
         from apps.projects.models import Project
-        from apps.video_engine.models import VideoOutput
+        from apps.video_engine.models import VideoOutput, RenderJob
 
         today = timezone.now().date()
+
+        # Recent failed projects with error messages
+        failed_qs = (
+            Project.objects
+            .select_related('render_job', 'user')
+            .filter(status='failed')
+            .order_by('-created_at')[:5]
+        )
+        recent_failures = []
+        for p in failed_qs:
+            err = ''
+            try:
+                err = p.render_job.error or ''
+            except Exception:
+                pass
+            recent_failures.append({
+                'id': p.id,
+                'product': p.product_name,
+                'user': p.user.email,
+                'error': err[:200],
+                'created_at': p.created_at.strftime('%d/%m %H:%M'),
+            })
+
         return Response({
             'users_total': User.objects.count(),
             'users_today': User.objects.filter(created_at__date=today).count(),
@@ -424,8 +447,9 @@ class AdminDashboardView(APIView):
             'chats_escalated': ChatSession.objects.filter(human_takeover=True).count(),
             'projects_by_status': {
                 s: Project.objects.filter(status=s).count()
-                for s in ['done', 'failed', 'generating_video', 'awaiting_selection']
+                for s in ['done', 'failed', 'generating_video', 'awaiting_script_approval', 'generating_script']
             },
+            'recent_failures': recent_failures,
         })
 
 

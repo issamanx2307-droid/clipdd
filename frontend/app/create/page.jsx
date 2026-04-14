@@ -107,7 +107,7 @@ function CreateInner() {
   const [keyPoints, setKeyPoints]   = useState('')
   const [tone, setTone]             = useState('urgency')
   const [duration, setDuration]     = useState(15)
-  const [voice, setVoice]           = useState('nova')
+  const [voice, setVoice]           = useState('1')
   const [extraReq, setExtraReq]     = useState('')
   const [includePerson, setIncludePerson] = useState(true)
   const [productImg, setProductImg] = useState(null)
@@ -398,10 +398,10 @@ function CreateInner() {
                 <label className={styles.label}>เสียงพากย์</label>
                 <div className={styles.voiceGrid}>
                   {[
-                    { value: 'nova',    emoji: '👩', label: 'Nova',    desc: 'หญิง · สดใส' },
-                    { value: 'shimmer', emoji: '👩', label: 'Shimmer', desc: 'หญิง · นุ่มนวล' },
-                    { value: 'onyx',    emoji: '👨', label: 'Onyx',    desc: 'ชาย · หนักแน่น' },
-                    { value: 'echo',    emoji: '👨', label: 'Echo',    desc: 'ชาย · เป็นธรรมชาติ' },
+                    { value: '1', emoji: '👩', label: 'อรนภา', desc: 'หญิง · สดใส · TikTok' },
+                    { value: '2', emoji: '👩', label: 'นภสร',  desc: 'หญิง · นุ่มนวล · พากย์' },
+                    { value: '3', emoji: '👨', label: 'ธนกร',  desc: 'ชาย · หนักแน่น · มั่นใจ' },
+                    { value: '4', emoji: '👨', label: 'ภูมิ',   desc: 'ชาย · เป็นธรรมชาติ' },
                   ].map(v => (
                     <button key={v.value} type="button"
                       className={`${styles.voiceBtn} ${voice === v.value ? styles.voiceActive : ''}`}
