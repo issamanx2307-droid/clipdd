@@ -17,6 +17,12 @@ class ProjectListCreateView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         user = request.user
+        # Maintenance mode — only staff users can create clips during development
+        if not user.is_staff:
+            return Response(
+                {'detail': 'ระบบอยู่ระหว่างการพัฒนา กรุณารอสักครู่ — เร็วๆ นี้จะเปิดให้ใช้งาน 🔧'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         if user.credits <= 0:
             return Response({'detail': 'เครดิตหมดแล้ว กรุณาอัพเกรดแพลน'}, status=status.HTTP_400_BAD_REQUEST)
 

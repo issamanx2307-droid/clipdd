@@ -122,6 +122,7 @@ function CreateInner() {
   const [videoResult, setVideoResult] = useState(null)
   const [error, setError]           = useState('')
   const [credits, setCredits]       = useState(null)
+  const [isStaff, setIsStaff]       = useState(false)
   const pollRef                     = useRef(null)
 
   useEffect(() => {
@@ -136,6 +137,7 @@ function CreateInner() {
       if (rawUser) {
         const parsed = JSON.parse(rawUser)
         setCredits(typeof parsed?.credits === 'number' ? parsed.credits : null)
+        setIsStaff(parsed?.is_staff === true)
       }
     } catch (error) {
       console.warn('Invalid cd_user in localStorage:', error)
@@ -294,6 +296,27 @@ function CreateInner() {
 
         {error && <div className={styles.error}>{error}</div>}
 
+        {/* ══════════ MAINTENANCE BANNER ══════════ */}
+        {!isStaff && (
+          <div style={{
+            background: 'linear-gradient(135deg, #1a0a00, #2d1200)',
+            border: '1px solid #92400e',
+            borderRadius: 14,
+            padding: '28px 32px',
+            marginBottom: 24,
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🔧</div>
+            <h2 style={{ margin: '0 0 10px', fontSize: '1.3rem', fontWeight: 800, color: '#fbbf24' }}>
+              ระบบอยู่ระหว่างการพัฒนา
+            </h2>
+            <p style={{ margin: 0, color: '#d97706', fontSize: '0.95rem', lineHeight: 1.6 }}>
+              เรากำลังปรับปรุงระบบสร้างคลิปให้ดีขึ้น<br />
+              เร็วๆ นี้จะเปิดให้ใช้งานได้เต็มรูปแบบ — ขอบคุณที่รอ! 🙏
+            </p>
+          </div>
+        )}
+
         {/* ══════════ STAGE: FORM ══════════ */}
         {stage === 'form' && (
           <div className={styles.card}>
@@ -356,14 +379,11 @@ function CreateInner() {
               <div className={styles.field}>
                 <label className={styles.label}>ความยาวคลิป</label>
                 <div className={styles.durationPicker}>
-                  {[15, 30].map(d => (
-                    <button key={d} type="button"
-                      className={`${styles.durationBtn} ${duration === d ? styles.durationActive : ''}`}
-                      onClick={() => setDuration(d)}>
-                      <span className={styles.durationNum}>{d}s</span>
-                      <span className={styles.durationDesc}>{d === 15 ? 'สั้น คม จุดใจ' : 'ยาว อธิบายละเอียด'}</span>
-                    </button>
-                  ))}
+                  <button type="button"
+                    className={`${styles.durationBtn} ${styles.durationActive}`}>
+                    <span className={styles.durationNum}>15s</span>
+                    <span className={styles.durationDesc}>สั้น คม จุดใจ</span>
+                  </button>
                 </div>
               </div>
 
