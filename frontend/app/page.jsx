@@ -144,11 +144,12 @@ function ClipCard({ thumb }) {
     v.pause(); v.currentTime = 0; setPlaying(false)
   }
 
+  const href = thumb ? `/clips/${thumb.id}` : '/clips'
+
   return (
-    <a href="/clips" className={styles.clipCard}
+    <a href={href} className={styles.clipCard}
       onMouseEnter={isVideo ? play : undefined}
-      onMouseLeave={isVideo ? stop : undefined}
-      onClick={isVideo ? (e) => { e.preventDefault(); playing ? stop() : play() } : undefined}>
+      onMouseLeave={isVideo ? stop : undefined}>
       <div className={styles.clipThumb}>
         {!thumb && <div className={styles.clipThumbPlaceholder} />}
         {thumb && !isVideo && <img src={thumb.file_url} alt={thumb.title} className={styles.clipThumbImg} />}
