@@ -14,6 +14,20 @@ class SiteContent(models.Model):
         return f'SiteContent({self.key})'
 
 
+class ClipThumbnail(models.Model):
+    image_path = models.CharField(max_length=300)   # relative to MEDIA_ROOT
+    title      = models.CharField(max_length=200, blank=True)
+    category   = models.CharField(max_length=80,  blank=True)  # urgent/review/drama/unbox/market
+    order      = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return f'ClipThumbnail({self.title or self.image_path})'
+
+
 class ChatSession(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='chat_session')
     human_takeover = models.BooleanField(default=False)

@@ -244,16 +244,31 @@
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0,0,0,.05);
   transition: transform .2s, box-shadow .2s;
+  display: block;
+  text-decoration: none;
+  color: inherit;
 }
 .clipCard:hover { transform:translateY(-4px); box-shadow:0 8px 28px rgba(0,0,0,.10) }
 .clipThumb {
-  height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
+  aspect-ratio: 4 / 3;
   position: relative;
+  overflow: hidden;
+  background: #F3F4F6;
 }
+.clipThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.clipThumbPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 .clipStyleBadge {
   position: absolute;
   top: 12px;

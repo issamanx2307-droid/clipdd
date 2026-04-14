@@ -590,6 +590,7 @@ function SiteEditor({ token }) {
     { key: 'stats', label: '📊 Stats' },
     { key: 'deals', label: '🛒 Deals' },
     { key: 'articles', label: '📖 Articles' },
+    { key: 'thumbnails', label: '🖼️ Thumbnails' },
   ]
 
   return (
@@ -651,6 +652,128 @@ function SiteEditor({ token }) {
           ]}
           newItem={{ cat:'', catColor:'#FF7A00', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)', title:'', excerpt:'', readTime:'5 นาที', url:'/articles' }}
         />
+      )}
+      {section === 'thumbnails' && <ThumbnailManager token={token} />}
+    </div>
+  )
+}
+
+// ─── Thumbnail Manager ─────────────────────────────────────────────
+const THUMB_CATS = [
+  { value:'', label:'— ไม่ระบุ —' },
+  { value:'urgent', label:'⚡ เร่งด่วน' },
+  { value:'review', label:'⭐ รีวิว' },
+  { value:'drama',  label:'😱 ดราม่า' },
+  { value:'unbox',  label:'📦 Unboxing' },
+  { value:'market', label:'🛒 ตลาดนัด' },
+]
+
+function ThumbnailManager({ token }) {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [msg, setMsg] = useState(null)
+  const [form, setForm] = useState({ title:'', category:'', order:'0' })
+  const fileRef = useRef(null)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/admin-api/clip-thumbnails/`, { headers: { 'X-Admin-Token': token } })
+      if (res.ok) setItems(await res.json())
+    } finally { setLoading(false) }
+  }, [token])
+
+  useEffect(() => { load() }, [load])
+
+  async function upload(e) {
+    e.preventDefault()
+    const file = fileRef.current?.files[0]
+    if (!file) return
+    setUploading(true); setMsg(null)
+    const fd = new FormData()
+    fd.append('image', file)
+    fd.append('title', form.title)
+    fd.append('category', form.category)
+    fd.append('order', form.order || '0')
+    try {
+      const res = await fetch(`${API}/admin-api/clip-thumbnails/`, {
+        method: 'POST',
+        headers: { 'X-Admin-Token': token },
+        body: fd,
+      })
+      const d = await res.json()
+      if (res.ok) {
+        setMsg({ ok: true, text: '✅ อัปโหลดสำเร็จ' })
+        setForm({ title:'', category:'', order:'0' })
+        if (fileRef.current) fileRef.current.value = ''
+        load()
+      } else {
+        setMsg({ ok: false, text: `❌ ${d.detail}` })
+      }
+    } catch { setMsg({ ok: false, text: '❌ เชื่อมต่อไม่ได้' }) }
+    finally { setUploading(false) }
+  }
+
+  async function del(id) {
+    if (!confirm('ลบ thumbnail นี้?')) return
+    try {
+      const res = await fetch(`${API}/admin-api/clip-thumbnails/`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ id }),
+      })
+      const d = await res.json()
+      if (res.ok) { setMsg({ ok: true, text: '✅ ลบสำเร็จ' }); load() }
+      else setMsg({ ok: false, text: `❌ ${d.detail}` })
+    } catch { setMsg({ ok: false, text: '❌ เชื่อมต่อไม่ได้' }) }
+  }
+
+  return (
+    <div className={styles.thumbManager}>
+      <h3 className={styles.thumbManagerTitle}>🖼️ Clip Thumbnails</h3>
+      <p className={styles.siteEditorNote}>อัปโหลดภาพ thumbnail สำหรับหน้าตัวอย่างคลิป — แสดงผลทันทีบนหน้าเว็บ</p>
+
+      {msg && (
+        <div className={`${styles.demoMsg} ${msg.ok ? styles.demoMsgOk : styles.demoMsgErr}`} style={{ marginBottom: 16 }}>
+          {msg.text}
+        </div>
+      )}
+
+      {/* Upload form */}
+      <form className={styles.thumbUploadForm} onSubmit={upload}>
+        <div className={styles.thumbUploadRow}>
+          <input ref={fileRef} type="file" accept="image/*" className={styles.thumbFileInput} required />
+          <input className={styles.thumbInput} placeholder="ชื่อ / caption (optional)"
+            value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+          <select className={styles.thumbSelect} value={form.category}
+            onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+            {THUMB_CATS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+          <input className={styles.thumbInput} style={{ width: 70 }} placeholder="ลำดับ" type="number" min="0"
+            value={form.order} onChange={e => setForm(f => ({ ...f, order: e.target.value }))} />
+          <button className={styles.thumbUploadBtn} type="submit" disabled={uploading}>
+            {uploading ? 'กำลังอัป...' : '+ อัปโหลด'}
+          </button>
+        </div>
+      </form>
+
+      {/* Grid */}
+      {loading ? <div className={styles.loading}>กำลังโหลด...</div> : (
+        <div className={styles.thumbGrid}>
+          {items.length === 0 && (
+            <p className={styles.siteEditorNote}>ยังไม่มี thumbnail — อัปโหลดด้านบนได้เลย</p>
+          )}
+          {items.map(t => (
+            <div key={t.id} className={styles.thumbItem}>
+              <img src={t.image_url} alt={t.title} className={styles.thumbItemImg} />
+              <div className={styles.thumbItemInfo}>
+                <span className={styles.thumbItemTitle}>{t.title || '—'}</span>
+                <span className={styles.thumbItemCat}>{t.category || 'ไม่ระบุ'}</span>
+              </div>
+              <button className={styles.thumbDeleteBtn} onClick={() => del(t.id)}>🗑️</button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )

@@ -3,13 +3,14 @@ import secrets
 import urllib.request
 import urllib.error
 import json as json_lib
+from pathlib import Path
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.conf import settings
 from django.utils import timezone
 from apps.video_engine.utils import absolute_media_url
-from .models import ChatSession, ChatMessage, SiteContent
+from .models import ChatSession, ChatMessage, SiteContent, ClipThumbnail
 
 logger = logging.getLogger(__name__)
 
@@ -860,3 +861,97 @@ class AdminSiteContentView(APIView):
             return Response({'detail': 'key ไม่ถูกต้อง'}, status=400)
         SiteContent.objects.filter(key=key).delete()
         return Response({'detail': f'{key} รีเซ็ตเป็นค่าเริ่มต้นแล้ว'})
+
+
+def _thumbnail_url(image_path):
+    return f"{settings.SITE_URL}/media/{image_path}"
+
+
+class PublicClipThumbnailView(APIView):
+    """Public — list clip thumbnails for landing page."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        items = ClipThumbnail.objects.all()
+        return Response([{
+            'id': t.id,
+            'image_url': _thumbnail_url(t.image_path),
+            'title': t.title,
+            'category': t.category,
+            'order': t.order,
+        } for t in items])
+
+
+class AdminClipThumbnailView(APIView):
+    """Admin — upload / list / delete clip thumbnails."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        if not check_admin(request):
+            return Response({'detail': 'Unauthorized'}, status=403)
+        items = ClipThumbnail.objects.all()
+        return Response([{
+            'id': t.id,
+            'image_url': _thumbnail_url(t.image_path),
+            'title': t.title,
+            'category': t.category,
+            'order': t.order,
+            'created_at': t.created_at.isoformat(),
+        } for t in items])
+
+    def post(self, request):
+        if not check_admin(request):
+            return Response({'detail': 'Unauthorized'}, status=403)
+        img = request.FILES.get('image')
+        if not img:
+            return Response({'detail': 'ต้องแนบไฟล์ image'}, status=400)
+
+        # Validate type
+        ct = img.content_type or ''
+        if not ct.startswith('image/'):
+            return Response({'detail': 'ไฟล์ต้องเป็นรูปภาพ'}, status=400)
+
+        # Save file
+        import uuid, os
+        ext = Path(img.name).suffix.lower() or '.jpg'
+        filename = f"{uuid.uuid4().hex}{ext}"
+        dest_dir = Path(settings.MEDIA_ROOT) / 'clip_thumbnails'
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / filename
+        with open(dest, 'wb') as f:
+            for chunk in img.chunks():
+                f.write(chunk)
+
+        image_path = f'clip_thumbnails/{filename}'
+        t = ClipThumbnail.objects.create(
+            image_path=image_path,
+            title=request.data.get('title', '').strip(),
+            category=request.data.get('category', '').strip(),
+            order=int(request.data.get('order', 0) or 0),
+        )
+        return Response({
+            'id': t.id,
+            'image_url': _thumbnail_url(t.image_path),
+            'title': t.title,
+            'category': t.category,
+        }, status=201)
+
+    def delete(self, request):
+        if not check_admin(request):
+            return Response({'detail': 'Unauthorized'}, status=403)
+        tid = request.data.get('id')
+        if not tid:
+            return Response({'detail': 'ต้องระบุ id'}, status=400)
+        try:
+            t = ClipThumbnail.objects.get(id=tid)
+            # Remove file
+            try:
+                fp = Path(settings.MEDIA_ROOT) / t.image_path
+                if fp.exists():
+                    fp.unlink()
+            except Exception:
+                pass
+            t.delete()
+            return Response({'detail': 'ลบสำเร็จ'})
+        except ClipThumbnail.DoesNotExist:
+            return Response({'detail': 'ไม่พบ thumbnail'}, status=404)

@@ -45,14 +45,9 @@ const CLIP_STYLES = [
   { id: 'market',  label: '🛒 ตลาดนัด' },
 ]
 
-const EXAMPLE_CLIPS = [
-  { id:1, emoji:'💄', style:'เร่งด่วน', styleColor:'#FF7A00', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)', title:'ครีมบำรุงผิวหน้า ลด 50% วันนี้วันเดียว!', views:'128K', cat:'urgent' },
-  { id:2, emoji:'👕', style:'รีวิว',    styleColor:'#7C3AED', bg:'linear-gradient(135deg,#F5F3FF,#DDD6FE)', title:'เสื้อผ้าแฟชั่นเกาหลี ราคาถูกสุดในไทย', views:'98K',  cat:'review' },
-  { id:3, emoji:'🍳', style:'Unboxing', styleColor:'#0EA5E9', bg:'linear-gradient(135deg,#F0F9FF,#BAE6FD)', title:'หม้อทอดไร้น้ำมัน เปิดกล่องพร้อมทดสอบ', views:'203K', cat:'unbox' },
-  { id:4, emoji:'💊', style:'ดราม่า',  styleColor:'#EF4444', bg:'linear-gradient(135deg,#FFF1F2,#FECDD3)', title:'อาหารเสริมลดน้ำหนัก ผลลัพธ์จริงไม่โกหก', views:'76K',  cat:'drama' },
-  { id:5, emoji:'👟', style:'เร่งด่วน', styleColor:'#FF7A00', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)', title:'รองเท้าผ้าใบสไตล์เกาหลี เหลือ 10 คู่สุดท้าย', views:'145K', cat:'urgent' },
-  { id:6, emoji:'🎒', style:'รีวิว',   styleColor:'#7C3AED', bg:'linear-gradient(135deg,#F5F3FF,#DDD6FE)', title:'กระเป๋าเป้ multi-function ใช้ได้ทุกวัน', views:'89K',  cat:'review' },
-]
+const CAT_COLOR = { urgent:'#FF7A00', review:'#7C3AED', drama:'#EF4444', unbox:'#0EA5E9', market:'#059669' }
+const CAT_LABEL = { urgent:'เร่งด่วน', review:'รีวิว', drama:'ดราม่า', unbox:'Unboxing', market:'ตลาดนัด' }
+const PLACEHOLDER_COUNT = 6
 
 const DEMO_VIDEOS = [
   { slot:'urgent', label:'เร่งด่วน', badge:'#FF7A00', title:'Flash Sale / FOMO สูง',      bg:'linear-gradient(135deg,#FFF7ED,#FDBA74)', emoji:'⚡' },
@@ -141,6 +136,7 @@ export default function Home() {
   const [stats, setStats] = useState(DEFAULT_STATS)
   const [deals, setDeals] = useState(DEFAULT_DEALS)
   const [articles, setArticles] = useState(DEFAULT_ARTICLES)
+  const [thumbs, setThumbs] = useState([])   // [] = loaded but empty
 
   useEffect(() => {
     fetch('/api/site-content/').then(r => r.ok ? r.json() : null).then(data => {
@@ -150,11 +146,14 @@ export default function Home() {
       if (data.deals?.length) setDeals(data.deals)
       if (data.articles?.length) setArticles(data.articles)
     }).catch(() => {})
+    fetch('/api/clip-thumbnails/').then(r => r.ok ? r.json() : []).then(data => {
+      setThumbs(Array.isArray(data) ? data : [])
+    }).catch(() => {})
   }, [])
 
-  const filtered = activeStyle === 'all'
-    ? EXAMPLE_CLIPS
-    : EXAMPLE_CLIPS.filter(c => c.cat === activeStyle)
+  const displayThumbs = activeStyle === 'all'
+    ? thumbs
+    : thumbs.filter(t => t.category === activeStyle)
 
   return (
     <main className={styles.main}>
@@ -251,25 +250,27 @@ export default function Home() {
         <div className={styles.clipsSection}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>ตัวอย่างคลิปที่ AI สร้าง</h2>
-            <a href="/register" className={styles.sectionMore}>สร้างของคุณเอง →</a>
+            <a href="/clips" className={styles.sectionMore}>ดูทั้งหมด →</a>
           </div>
           <div className={styles.clipsGrid}>
-            {filtered.map(clip => (
-              <div key={clip.id} className={styles.clipCard}>
-                <div className={styles.clipThumb} style={{ background: clip.bg }}>
-                  {clip.emoji}
-                  <span className={styles.clipStyleBadge} style={{ background: clip.styleColor }}>
-                    {clip.style}
-                  </span>
+            {(displayThumbs.length > 0 ? displayThumbs : Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => null)).map((thumb, i) => (
+              <a key={thumb?.id ?? i} href="/clips" className={styles.clipCard}>
+                <div className={styles.clipThumb}>
+                  {thumb
+                    ? <img src={thumb.image_url} alt={thumb.title} className={styles.clipThumbImg} />
+                    : <div className={styles.clipThumbPlaceholder} />
+                  }
+                  {thumb?.category && (
+                    <span className={styles.clipStyleBadge} style={{ background: CAT_COLOR[thumb.category] || '#6B7280' }}>
+                      {CAT_LABEL[thumb.category] || thumb.category}
+                    </span>
+                  )}
                 </div>
                 <div className={styles.clipBody}>
-                  <p className={styles.clipTitle}>{clip.title}</p>
-                  <div className={styles.clipMeta}>
-                    <span className={styles.clipViews}>👁 {clip.views} views</span>
-                  </div>
-                  <a href="/register" className={styles.clipBtn}>สร้างคลิปแบบนี้</a>
+                  <p className={styles.clipTitle}>{thumb?.title || '\u00A0'}</p>
+                  <span className={styles.clipBtn}>ดูคลิปทั้งหมด</span>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>

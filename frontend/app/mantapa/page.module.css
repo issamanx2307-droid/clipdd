@@ -290,3 +290,23 @@
   border-radius: 8px; padding: 10px; font-size: 14px; cursor: pointer; transition: all 0.15s; text-align: center;
 }
 .listEditorAdd:hover { border-color: #7c3aed; color: #a78bfa; }
+
+/* ── Thumbnail Manager ── */
+.thumbManager { padding: 24px 0; }
+.thumbManagerTitle { font-size: 1rem; font-weight: 700; color: #e2e8f0; margin: 0 0 4px; }
+.thumbUploadForm { margin: 16px 0 24px; }
+.thumbUploadRow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.thumbFileInput { flex: 1; min-width: 200px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; color: #e2e8f0; font-size: 13px; cursor: pointer; }
+.thumbInput { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; color: #e2e8f0; font-size: 13px; flex: 1; min-width: 140px; }
+.thumbSelect { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; color: #e2e8f0; font-size: 13px; cursor: pointer; }
+.thumbUploadBtn { background: #7c3aed; color: #fff; border: none; border-radius: 8px; padding: 9px 20px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .2s; }
+.thumbUploadBtn:hover { background: #6d28d9; }
+.thumbUploadBtn:disabled { opacity: .5; cursor: not-allowed; }
+.thumbGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-top: 8px; }
+.thumbItem { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; position: relative; }
+.thumbItemImg { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+.thumbItemInfo { padding: 8px 10px; }
+.thumbItemTitle { display: block; font-size: 12px; color: #e2e8f0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thumbItemCat { display: block; font-size: 11px; color: #94a3b8; margin-top: 2px; }
+.thumbDeleteBtn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.6); border: none; border-radius: 6px; padding: 4px 7px; font-size: 13px; cursor: pointer; transition: background .2s; }
+.thumbDeleteBtn:hover { background: rgba(239,68,68,.8); }
