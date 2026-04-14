@@ -5,7 +5,7 @@ from .views import (
     AdminAIChatView, AdminCreditsView, AdminDemoClipView,
     PublicSiteContentView, AdminSiteContentView,
     PublicClipThumbnailView, AdminClipThumbnailView,
-    SystemStatusView,
+    SystemStatusView, AdminMaintenanceView,
 )
 
 urlpatterns = [
@@ -23,4 +23,5 @@ urlpatterns = [
     path('admin-api/demo-clips/', AdminDemoClipView.as_view()),
     path('admin-api/site-content/', AdminSiteContentView.as_view()),
     path('admin-api/clip-thumbnails/', AdminClipThumbnailView.as_view()),
+    path('admin-api/maintenance/', AdminMaintenanceView.as_view()),
 ]

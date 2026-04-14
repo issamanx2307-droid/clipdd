@@ -962,9 +962,38 @@ class AdminClipThumbnailView(APIView):
             return Response({'detail': 'ไม่พบ thumbnail'}, status=404)
 
 
+def _get_maintenance_mode():
+    """Read maintenance mode from DB (SiteContent key=system_settings), fallback to env var."""
+    obj = SiteContent.objects.filter(key='system_settings').first()
+    if obj and 'maintenance' in obj.content:
+        return bool(obj.content['maintenance'])
+    return settings.MAINTENANCE_MODE
+
+
 class SystemStatusView(APIView):
     """Public — returns current system maintenance status."""
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        return Response({'maintenance': settings.MAINTENANCE_MODE})
+        return Response({'maintenance': _get_maintenance_mode()})
+
+
+class AdminMaintenanceView(APIView):
+    """Admin — get or toggle maintenance mode (stored in DB, instant effect)."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        if not check_admin(request):
+            return Response({'detail': 'Unauthorized'}, status=403)
+        return Response({'maintenance': _get_maintenance_mode()})
+
+    def post(self, request):
+        if not check_admin(request):
+            return Response({'detail': 'Unauthorized'}, status=403)
+        value = bool(request.data.get('maintenance', True))
+        obj, _ = SiteContent.objects.get_or_create(
+            key='system_settings', defaults={'content': {}}
+        )
+        obj.content = {**obj.content, 'maintenance': value}
+        obj.save()
+        return Response({'maintenance': value})

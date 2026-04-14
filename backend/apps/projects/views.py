@@ -1,4 +1,5 @@
 from django.conf import settings
+from apps.support.views import _get_maintenance_mode
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,8 +19,8 @@ class ProjectListCreateView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         user = request.user
-        # Maintenance mode — controlled via MAINTENANCE_MODE env var (true/false)
-        if settings.MAINTENANCE_MODE and not user.is_staff:
+        # Maintenance mode — read from DB (instant toggle), fallback to env var
+        if _get_maintenance_mode() and not user.is_staff:
             return Response(
                 {'detail': 'ระบบอยู่ระหว่างการพัฒนา กรุณารอสักครู่ — เร็วๆ นี้จะเปิดให้ใช้งาน 🔧'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,

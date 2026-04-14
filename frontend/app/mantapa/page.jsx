@@ -882,6 +882,76 @@ function ListEditor({ content, saving, onSave, onReset, fields, newItem }) {
 }
 
 // ──────────────────────────────────────────────
+// Maintenance Toggle
+// ──────────────────────────────────────────────
+function MaintenanceToggle({ token }) {
+  const [maintenance, setMaintenance] = useState(null)  // null = loading
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch(`${API}/admin-api/maintenance/`, { headers: { 'X-Admin-Token': token } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setMaintenance(d.maintenance) })
+      .catch(() => {})
+  }, [token])
+
+  async function toggle() {
+    if (maintenance === null || saving) return
+    setSaving(true)
+    try {
+      const res = await fetch(`${API}/admin-api/maintenance/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ maintenance: !maintenance }),
+      })
+      const d = await res.json()
+      if (res.ok) setMaintenance(d.maintenance)
+    } catch {}
+    finally { setSaving(false) }
+  }
+
+  const isOn = maintenance === true
+
+  return (
+    <div style={{
+      background: isOn ? 'linear-gradient(135deg,#1a0a00,#2d1200)' : 'linear-gradient(135deg,#001a0a,#002d12)',
+      border: `1px solid ${isOn ? '#92400e' : '#065f46'}`,
+      borderRadius: 14, padding: '20px 24px', marginBottom: 24,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+    }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <span style={{ fontSize: '1.4rem' }}>{isOn ? '🔧' : '✅'}</span>
+          <span style={{ fontWeight: 800, fontSize: '1rem', color: isOn ? '#fbbf24' : '#34d399' }}>
+            {maintenance === null ? 'กำลังโหลด...' : isOn ? 'ระบบปิดอยู่ (Maintenance)' : 'ระบบเปิดปกติ'}
+          </span>
+        </div>
+        <p style={{ margin: 0, fontSize: '0.82rem', color: isOn ? '#d97706' : '#6ee7b7' }}>
+          {isOn
+            ? 'User ทั่วไปสร้างคลิปไม่ได้ — เฉพาะ Admin เท่านั้น'
+            : 'ทุกคนสร้างคลิปได้ตามปกติ'}
+        </p>
+      </div>
+      <button
+        onClick={toggle}
+        disabled={maintenance === null || saving}
+        style={{
+          background: isOn ? '#E53E3E' : '#059669',
+          color: '#fff', border: 'none', borderRadius: 999,
+          padding: '10px 28px', fontWeight: 800, fontSize: '0.9rem',
+          cursor: maintenance === null || saving ? 'not-allowed' : 'pointer',
+          opacity: maintenance === null || saving ? 0.6 : 1,
+          transition: 'background .2s',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {saving ? '⏳ กำลังบันทึก...' : isOn ? '🟢 เปิดระบบ' : '🔴 ปิดระบบ'}
+      </button>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────
 // Dashboard
 // ──────────────────────────────────────────────
 function Dashboard({ token }) {
@@ -931,6 +1001,7 @@ function Dashboard({ token }) {
 
       {tab === 'dashboard' && (
         <div className={styles.content}>
+          <MaintenanceToggle token={token} />
           <div className={styles.statsGrid}>
             <StatCard icon="👥" label="Users ทั้งหมด" value={stats?.users_total} sub={`+${stats?.users_today ?? 0} วันนี้`} />
             <StatCard icon="🎬" label="Projects ทั้งหมด" value={stats?.projects_total} sub={`+${stats?.projects_today ?? 0} วันนี้`} />
