@@ -147,30 +147,29 @@ Visual vibe: {tg['vibe']}
 # STEP 2 — VOICE
 # ─────────────────────────────────────────────
 
-def generate_voice(text, output_path, voice='nova'):
+def generate_voice(text, output_path, voice='1'):
     """
-    Generate Thai TTS.
-    - If voice is a Botnoi speaker_id (numeric string like '1','3','8') → use Botnoi Voice API
-    - Otherwise → use OpenAI TTS (nova/shimmer/onyx/echo)
-    Returns output_path.
+    Generate Thai TTS via Botnoi Voice API.
+    voice = Botnoi speaker_id (default '1' = ผู้หญิง, '3' = ผู้ชาย)
+    ไม่มี fallback — ถ้า Botnoi ล้มเหลวให้ raise exception หยุดระบบทันที
     """
-    voice = str(voice or 'nova')
-    if voice.isdigit():
-        try:
-            return _generate_voice_botnoi(text, output_path, speaker=voice)
-        except requests.RequestException as exc:
-            logger.warning(
-                "Botnoi TTS failed for speaker=%s, falling back to OpenAI voice nova: %s",
-                voice,
-                exc,
-            )
-            return _generate_voice_openai(text, output_path, voice='nova')
-    return _generate_voice_openai(text, output_path, voice=voice)
+    speaker = str(voice or '1')
+    # ถ้าไม่ใช่ตัวเลข (เช่น ค่าเก่า 'nova' ที่ยังค้างในฐานข้อมูล) ให้ใช้ speaker 1
+    if not speaker.isdigit():
+        logger.warning(f"generate_voice: voice='{speaker}' ไม่ใช่ Botnoi speaker ID — ใช้ speaker '1' แทน")
+        speaker = '1'
+    return _generate_voice_botnoi(text, output_path, speaker=speaker)
 
 
 def _generate_voice_botnoi(text, output_path, speaker='1'):
-    """Generate TTS via Botnoi Voice API. Downloads mp3 to output_path."""
+    """
+    Generate TTS via Botnoi Voice API. Downloads mp3 to output_path.
+    ไม่มี fallback — ถ้า fail ให้ raise exception เพื่อหยุด pipeline
+    """
     botnoi_token = getattr(settings, 'BOTNOI_API_KEY', '')
+    if not botnoi_token:
+        raise Exception('BOTNOI_API_KEY ไม่ได้ตั้งค่า — กรุณาเพิ่มใน .env แล้ว restart')
+
     resp = requests.post(
         'https://api-voice.botnoi.ai/openapi/v1/generate_audio',
         headers={
@@ -185,7 +184,6 @@ def _generate_voice_botnoi(text, output_path, speaker='1'):
             'type_media': 'mp3',
             'save_file': 'true',
             'language': 'th',
-            'page': 'user',
         },
         timeout=60,
     )
@@ -193,23 +191,9 @@ def _generate_voice_botnoi(text, output_path, speaker='1'):
     data = resp.json()
     audio_url = data.get('audio_url')
     if not audio_url:
-        raise Exception(f'Botnoi TTS: no audio_url in response: {data}')
+        raise Exception(f'Botnoi TTS: ไม่ได้รับ audio_url — response: {data}')
     download_file(audio_url, output_path)
     logger.info(f"Botnoi TTS done: speaker={speaker} points_left={data.get('point')}")
-    return output_path
-
-
-def _generate_voice_openai(text, output_path, voice='nova'):
-    """Generate TTS via OpenAI. Falls back if Botnoi not selected."""
-    from openai import OpenAI
-    client = OpenAI(api_key=settings.OPENAI_API_KEY)
-    response = client.audio.speech.create(
-        model='tts-1',
-        voice=voice,
-        input=text,
-        speed=1.05,
-    )
-    response.stream_to_file(output_path)
     return output_path
 
 
@@ -652,7 +636,7 @@ def generate_video_task(self, project_id):
 
         # ── 4. TTS ────────────────────────────────────────────
         audio_path = str(media_dir / f'audio/project_{project_id}.mp3')
-        generate_voice(full_text, audio_path, voice=project.voice or 'nova')
+        generate_voice(full_text, audio_path, voice=project.voice or '1')
         audio_duration = get_audio_duration(audio_path)
         logger.info(f"Audio duration for project {project_id}: {audio_duration:.2f}s")
         render_job.progress = 38
