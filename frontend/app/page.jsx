@@ -54,11 +54,11 @@ const EXAMPLE_CLIPS = [
   { id:6, emoji:'🎒', style:'รีวิว',   styleColor:'#7C3AED', bg:'linear-gradient(135deg,#F5F3FF,#DDD6FE)', title:'กระเป๋าเป้ multi-function ใช้ได้ทุกวัน', views:'89K',  cat:'review' },
 ]
 
-const HERO_CARDS = [
-  { emoji:'⚡', label:'เร่งด่วน', bg:'linear-gradient(135deg,#FFF7ED,#FDBA74)', badge:'#FF7A00', title:'ลด 50% วันนี้วันเดียว!', views:'128K' },
-  { emoji:'⭐', label:'รีวิว',   bg:'linear-gradient(135deg,#F5F3FF,#C4B5FD)', badge:'#7C3AED', title:'รีวิวจริง ลูกค้าเชื่อถือ', views:'98K' },
-  { emoji:'😱', label:'ดราม่า', bg:'linear-gradient(135deg,#FFF1F2,#FCA5A5)', badge:'#EF4444', title:'เรื่องนี้ต้องบอกต่อ!', views:'76K' },
-  { emoji:'📦', label:'Unboxing',bg:'linear-gradient(135deg,#F0F9FF,#7DD3FC)', badge:'#0EA5E9', title:'เปิดกล่อง ทดสอบสด', views:'203K' },
+const DEMO_VIDEOS = [
+  { slot:'urgent', label:'เร่งด่วน', badge:'#FF7A00', title:'Flash Sale / FOMO สูง' },
+  { slot:'review', label:'รีวิว',    badge:'#7C3AED', title:'น่าเชื่อถือ บอกต่อ' },
+  { slot:'drama',  label:'ดราม่า',   badge:'#EF4444', title:'Before/After อารมณ์แรง' },
+  { slot:'unbox',  label:'Unboxing', badge:'#0EA5E9', title:'เปิดกล่อง reveal' },
 ]
 
 const PLANS = [
@@ -173,19 +173,22 @@ export default function Home() {
           </p>
         </AnimSection>
 
-        {/* RIGHT — 2×2 clip style cards */}
+        {/* RIGHT — 2×2 demo video cards */}
         <div className={styles.heroCards}>
-          {HERO_CARDS.map(card => (
-            <div key={card.label} className={styles.heroCard}>
-              <div className={styles.heroCardThumb} style={{ background: card.bg }}>
-                {card.emoji}
+          {DEMO_VIDEOS.map(v => (
+            <div key={v.slot} className={styles.heroCard}>
+              <div className={styles.heroCardThumb}>
+                <video
+                  src={`/media/demos/${v.slot}.mp4`}
+                  className={styles.heroCardVideo}
+                  autoPlay muted loop playsInline
+                />
+                <span className={styles.heroCardBadgeOverlay} style={{ background: v.badge + '22', color: v.badge }}>
+                  {v.label}
+                </span>
               </div>
               <div className={styles.heroCardBody}>
-                <span className={styles.heroCardBadge} style={{ background: card.badge + '20', color: card.badge }}>
-                  {card.label}
-                </span>
-                <p className={styles.heroCardTitle}>{card.title}</p>
-                <p className={styles.heroCardViews}>👁 {card.views} views</p>
+                <p className={styles.heroCardTitle}>{v.title}</p>
               </div>
             </div>
           ))}
