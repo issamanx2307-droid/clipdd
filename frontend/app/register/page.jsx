@@ -16,6 +16,11 @@ async function getFingerprint() {
   }
 }
 
+function getNextUrl() {
+  if (typeof window === 'undefined') return '/create'
+  return new URLSearchParams(window.location.search).get('next') || '/create'
+}
+
 function GoogleRegisterButton({ loading, setLoading, setError }) {
   const loginWithGoogle = useGoogleLogin({
     flow: 'implicit',
@@ -43,7 +48,7 @@ function GoogleRegisterButton({ loading, setLoading, setError }) {
         }
         localStorage.setItem('cd_token', data.token)
         localStorage.setItem('cd_user', JSON.stringify(data.user))
-        window.location.href = '/create'
+        window.location.href = getNextUrl()
       } catch {
         setError('ไม่สามารถเชื่อมต่อได้')
       } finally {
@@ -67,7 +72,6 @@ function GoogleRegisterButton({ loading, setLoading, setError }) {
 }
 
 export default function RegisterPage() {
-  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -82,7 +86,7 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, fingerprint }),
+        body: JSON.stringify({ email, password, fingerprint }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -91,7 +95,7 @@ export default function RegisterPage() {
       }
       localStorage.setItem('cd_token', data.token)
       localStorage.setItem('cd_user', JSON.stringify(data.user))
-      window.location.href = '/create'
+      window.location.href = getNextUrl()
     } catch {
       setError('ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่')
     } finally {
@@ -120,17 +124,6 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.field}>
-              <label className={styles.label}>ชื่อ (ไม่บังคับ)</label>
-              <input
-                className={styles.input}
-                type="text"
-                placeholder="ชื่อร้านหรือชื่อคุณ"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className={styles.field}>
               <label className={styles.label}>อีเมล</label>
               <input
                 className={styles.input}
@@ -139,6 +132,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                autoFocus
               />
             </div>
             <div className={styles.field}>

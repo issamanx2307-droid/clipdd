@@ -10,7 +10,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'name', 'password', 'fingerprint']
+        fields = ['email', 'password', 'fingerprint']
 
     def validate_fingerprint(self, value):
         # ไม่ query DB ที่นี่ (กัน TOCTOU); uniqueness = DB + IntegrityError ใน create
@@ -20,12 +20,15 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         fingerprint = validated_data.pop('fingerprint', None)
+        email = validated_data['email']
+        # Derive display name from email local-part (e.g. "john.doe@..." → "john.doe")
+        derived_name = email.split('@')[0]
         try:
             user = User.objects.create_user(
-                username=validated_data['email'],
-                email=validated_data['email'],
+                username=email,
+                email=email,
                 password=validated_data['password'],
-                name=validated_data.get('name', ''),
+                name=derived_name,
                 fingerprint=fingerprint,
             )
         except IntegrityError as exc:
