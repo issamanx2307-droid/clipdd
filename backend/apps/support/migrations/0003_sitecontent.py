@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('support', '0001_initial'),
+        ('support', '0002_alter_chatmessage_id_alter_chatsession_id'),
     ]
 
     operations = [
