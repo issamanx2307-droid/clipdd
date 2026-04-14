@@ -2,6 +2,18 @@ from django.db import models
 from apps.users.models import User
 
 
+class SiteContent(models.Model):
+    key = models.CharField(max_length=80, unique=True)
+    content = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['key']
+
+    def __str__(self):
+        return f'SiteContent({self.key})'
+
+
 class ChatSession(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='chat_session')
     human_takeover = models.BooleanField(default=False)

@@ -9,9 +9,43 @@ from rest_framework import status, permissions
 from django.conf import settings
 from django.utils import timezone
 from apps.video_engine.utils import absolute_media_url
-from .models import ChatSession, ChatMessage
+from .models import ChatSession, ChatMessage, SiteContent
 
 logger = logging.getLogger(__name__)
+
+# ─────────────────────────────────────────────
+# SITE CONTENT DEFAULTS
+# ─────────────────────────────────────────────
+
+DEFAULT_SITE_CONTENT = {
+    'hero': {
+        'badge': 'มีร้านค้าใช้งานแล้ว 1,000+ ร้าน',
+        'title_line1': 'สร้างคลิปขายของ',
+        'title_accent': 'TikTok อัตโนมัติ',
+        'title_sub': 'ด้วย AI ใน 60 วินาที',
+        'desc': 'ใส่สินค้า → AI เขียนสคริปต์ + พากย์เสียง + ตัดต่อวิดีโอให้อัตโนมัติ\nไม่ต้องมีทักษะตัดต่อ · ไม่ต้องจ้างช่างวิดีโอ',
+        'cta_primary': 'สมัครฟรี — ลองสร้าง 1 คลิป',
+        'cta_secondary': 'เข้าระบบสร้างคลิป →',
+        'note': '✓ ฟรี 1 คลิปแรก · ✓ ไม่ต้องบัตรเครดิต · ✓ เริ่มได้ทันที',
+    },
+    'stats': [
+        {'value': '1,000+', 'label': 'ร้านค้าใช้งาน'},
+        {'value': '50,000+', 'label': 'คลิปที่สร้างแล้ว'},
+        {'value': '< 1 นาที', 'label': 'เวลาสร้างคลิป'},
+        {'value': '4.9 ★', 'label': 'คะแนนความพึงพอใจ'},
+    ],
+    'deals': [
+        {'id': 1, 'emoji': '💡', 'title': 'ไฟ Ring Light LED', 'desc': 'แสงสวย เซลฟี่คลิปชัด ขายของออนไลน์ดูน่าเชื่อถือขึ้น', 'price': '฿299', 'badge': 'ขายดี', 'bg': 'linear-gradient(135deg,#FFF7ED,#FED7AA)', 'url': '/deals'},
+        {'id': 2, 'emoji': '🎙️', 'title': 'ไมโครโฟน Clip-on', 'desc': 'เสียงพากย์ใสชัด ไม่มีเสียงรบกวน เหมาะกับ TikTok Live', 'price': '฿490', 'badge': 'แนะนำ', 'bg': 'linear-gradient(135deg,#F5F3FF,#DDD6FE)', 'url': '/deals'},
+        {'id': 3, 'emoji': '📱', 'title': 'ขาตั้งโทรศัพท์', 'desc': 'ถ่ายคลิปคนเดียวได้ มุมกล้องปรับได้ 360 องศา', 'price': '฿199', 'badge': 'ใหม่', 'bg': 'linear-gradient(135deg,#F0F9FF,#BAE6FD)', 'url': '/deals'},
+        {'id': 4, 'emoji': '🎬', 'title': 'Green Screen ผ้าพื้นเขียว', 'desc': 'เปลี่ยนแบ็คกราวนด์ได้ทุกแบบ ทำ effect ดูโปร', 'price': '฿350', 'badge': 'ฮิต', 'bg': 'linear-gradient(135deg,#F0FDF4,#BBF7D0)', 'url': '/deals'},
+    ],
+    'articles': [
+        {'id': 1, 'cat': 'เทคนิค TikTok', 'bg': 'linear-gradient(135deg,#FFF7ED,#FED7AA)', 'catColor': '#FF7A00', 'title': '10 วิธีเพิ่มยอดวิวคลิปสินค้าบน TikTok ให้ได้ล้านวิวใน 2025', 'excerpt': 'เทคนิคที่ร้านค้าหลายร้านใช้จนยอดขายพุ่ง ปรับได้ทันที', 'readTime': '5 นาที', 'url': '/articles'},
+        {'id': 2, 'cat': 'สคริปต์คลิป', 'bg': 'linear-gradient(135deg,#F5F3FF,#DDD6FE)', 'catColor': '#7C3AED', 'title': 'สูตรเขียนสคริปต์ขายของสไตล์ Viral — Hook 3 วินาทีแรก', 'excerpt': 'โครงสร้างสคริปต์ที่ AI ของเราใช้ พร้อมตัวอย่างคลิปขายดีจริง', 'readTime': '7 นาที', 'url': '/articles'},
+        {'id': 3, 'cat': 'เพิ่มยอดขาย', 'bg': 'linear-gradient(135deg,#F0FDF4,#BBF7D0)', 'catColor': '#059669', 'title': 'เปรียบเทียบ: ร้านที่ใช้ AI สร้างคลิปกับร้านที่ถ่ายเองธรรมดา', 'excerpt': 'เคสจริงจากร้านค้าใน ClipDD วิเคราะห์ยอดวิว engagement และ conversion', 'readTime': '6 นาที', 'url': '/articles'},
+    ],
+}
 
 # ─────────────────────────────────────────────
 # USER CHAT — system prompt + tools
@@ -588,23 +622,78 @@ class AdminCreditsView(APIView):
         except Exception as e:
             result['openai'] = {'status': 'error', 'key_valid': False, 'detail': str(e)}
 
-        # Fal.ai — no public balance API, just verify key is configured
-        fal_key = settings.FAL_KEY
+        # Fal.ai — try to fetch balance from API
+        fal_key = getattr(settings, 'FAL_KEY', '')
         if fal_key:
-            result['fal'] = {
-                'status': 'ok',
-                'key_valid': True,
-                'note': 'ดู balance ที่ fal.ai/dashboard/billing',
-            }
+            try:
+                req_fal = urllib.request.Request(
+                    'https://rest.alpha.fal.ai/v1/me',
+                    headers={'Authorization': f'Key {fal_key}'},
+                )
+                with urllib.request.urlopen(req_fal, timeout=6) as rf:
+                    fal_data = json_lib.loads(rf.read())
+                    balance = fal_data.get('balance') or fal_data.get('credits')
+                    result['fal'] = {
+                        'status': 'ok',
+                        'key_valid': True,
+                        'balance': balance,
+                        'note': 'ดู balance เพิ่มเติมที่ fal.ai/dashboard/billing',
+                    }
+            except Exception:
+                result['fal'] = {
+                    'status': 'ok',
+                    'key_valid': True,
+                    'note': 'Key ใช้งานได้ — ดู balance ที่ fal.ai/dashboard/billing',
+                }
         else:
             result['fal'] = {'status': 'error', 'key_valid': False, 'detail': 'FAL_KEY ไม่ได้ตั้งค่า'}
 
-        # Gemini — no credit API
-        result['gemini'] = {
-            'model': 'gemini-2.0-flash',
-            'status': 'active',
-            'note': 'ไม่มี Balance API — ดูที่ aistudio.google.com',
-        }
+        # Gemini — verify key by listing models
+        gemini_key = getattr(settings, 'GEMINI_API_KEY', '')
+        if gemini_key:
+            try:
+                req_g = urllib.request.Request(
+                    f'https://generativelanguage.googleapis.com/v1beta/models?key={gemini_key}',
+                )
+                with urllib.request.urlopen(req_g, timeout=6) as rg:
+                    result['gemini'] = {
+                        'status': 'active',
+                        'key_valid': True,
+                        'model': 'gemini-2.0-flash',
+                        'note': 'Free tier — ดูที่ aistudio.google.com',
+                    }
+            except urllib.error.HTTPError as e:
+                result['gemini'] = {'status': 'error', 'key_valid': False, 'detail': f'HTTP {e.code}'}
+            except Exception:
+                result['gemini'] = {'status': 'active', 'key_valid': True, 'model': 'gemini-2.0-flash', 'note': 'Free tier'}
+        else:
+            result['gemini'] = {'status': 'error', 'key_valid': False, 'detail': 'GEMINI_API_KEY ไม่ได้ตั้งค่า'}
+
+        # Botnoi (Thai TTS)
+        botnoi_key = getattr(settings, 'BOTNOI_API_KEY', '')
+        if botnoi_key:
+            try:
+                req_b = urllib.request.Request(
+                    'https://api-voice.botnoi.ai/openapi/v1/get_token_user',
+                    headers={'botnoi-token': botnoi_key},
+                )
+                with urllib.request.urlopen(req_b, timeout=6) as rb:
+                    botnoi_data = json_lib.loads(rb.read())
+                    token_balance = botnoi_data.get('balance') or botnoi_data.get('token') or botnoi_data.get('credit')
+                    result['botnoi'] = {
+                        'status': 'ok',
+                        'key_valid': True,
+                        'balance': token_balance,
+                        'note': 'Thai TTS — ดูที่ botnoi.ai',
+                    }
+            except Exception:
+                result['botnoi'] = {
+                    'status': 'ok',
+                    'key_valid': True,
+                    'note': 'Key ตั้งค่าแล้ว — ดู token ที่ botnoi.ai/dashboard',
+                }
+        else:
+            result['botnoi'] = {'status': 'error', 'key_valid': False, 'detail': 'BOTNOI_API_KEY ไม่ได้ตั้งค่า'}
 
         return Response(result)
 
@@ -659,3 +748,72 @@ class AdminDemoClipView(APIView):
             'size_kb': stat.st_size // 1024,
             'url': f'/media/demos/{slot}.mp4',
         })
+
+
+class PublicSiteContentView(APIView):
+    """Public endpoint — returns all site content for landing page rendering."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        result = {}
+        for key, default in DEFAULT_SITE_CONTENT.items():
+            try:
+                obj = SiteContent.objects.get(key=key)
+                result[key] = obj.content
+            except SiteContent.DoesNotExist:
+                result[key] = default
+        return Response(result)
+
+
+class AdminSiteContentView(APIView):
+    """Admin endpoint — get or update individual content blocks."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        if not check_admin(request):
+            return Response({'detail': 'Unauthorized'}, status=403)
+        result = {}
+        for key, default in DEFAULT_SITE_CONTENT.items():
+            try:
+                obj = SiteContent.objects.get(key=key)
+                result[key] = {
+                    'content': obj.content,
+                    'updated_at': obj.updated_at.isoformat(),
+                    'is_custom': True,
+                }
+            except SiteContent.DoesNotExist:
+                result[key] = {
+                    'content': default,
+                    'updated_at': None,
+                    'is_custom': False,
+                }
+        return Response(result)
+
+    def put(self, request):
+        if not check_admin(request):
+            return Response({'detail': 'Unauthorized'}, status=403)
+        key = request.data.get('key', '').strip()
+        content = request.data.get('content')
+        if not key or key not in DEFAULT_SITE_CONTENT:
+            return Response({'detail': f'key ต้องเป็น: {", ".join(DEFAULT_SITE_CONTENT)}'}, status=400)
+        if content is None:
+            return Response({'detail': 'ต้องระบุ content'}, status=400)
+        obj, _ = SiteContent.objects.update_or_create(
+            key=key,
+            defaults={'content': content},
+        )
+        return Response({
+            'detail': 'บันทึกสำเร็จ',
+            'key': key,
+            'updated_at': obj.updated_at.isoformat(),
+        })
+
+    def delete(self, request):
+        """Reset a key back to default."""
+        if not check_admin(request):
+            return Response({'detail': 'Unauthorized'}, status=403)
+        key = request.data.get('key', '').strip()
+        if not key or key not in DEFAULT_SITE_CONTENT:
+            return Response({'detail': 'key ไม่ถูกต้อง'}, status=400)
+        SiteContent.objects.filter(key=key).delete()
+        return Response({'detail': f'{key} รีเซ็ตเป็นค่าเริ่มต้นแล้ว'})

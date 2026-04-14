@@ -97,6 +97,7 @@ function CreditsSection({ token }) {
   const openai = data.openai || {}
   const fal = data.fal || {}
   const gemini = data.gemini || {}
+  const botnoi = data.botnoi || {}
 
   return (
     <div className={styles.creditsSection}>
@@ -139,8 +140,22 @@ function CreditsSection({ token }) {
         </CreditCard>
 
         <CreditCard name="Gemini" icon="✨" statusOk={gemini.status === 'active'}>
-          <div className={styles.creditAmount}>{gemini.model}</div>
-          <div className={styles.creditDetail}>{gemini.note}</div>
+          {gemini.key_valid ? <>
+            <div className={styles.creditAmount}>{gemini.model}</div>
+            <div className={styles.creditDetail}>{gemini.note}</div>
+          </> : <div className={styles.creditErr}>{gemini.detail}</div>}
+        </CreditCard>
+
+        <CreditCard name="Botnoi TTS" icon="🗣️" statusOk={botnoi.status === 'ok'}>
+          {botnoi.status === 'ok' && botnoi.balance != null && <>
+            <div className={styles.creditAmount}>{botnoi.balance}</div>
+            <div className={styles.creditDetail}>Token คงเหลือ</div>
+          </>}
+          {botnoi.status === 'ok' && botnoi.balance == null && <>
+            <div className={styles.creditAmount}>✅</div>
+            <div className={styles.creditDetail}>{botnoi.note}</div>
+          </>}
+          {botnoi.status === 'error' && <div className={styles.creditErr}>{botnoi.detail}</div>}
         </CreditCard>
       </div>
       <button className={styles.refreshBtn} onClick={load}>↻ Refresh</button>
@@ -491,6 +506,243 @@ function DemoClipsSection({ token }) {
 }
 
 // ──────────────────────────────────────────────
+// Site Editor
+// ──────────────────────────────────────────────
+function SiteEditor({ token }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(null)   // key being saved
+  const [msg, setMsg] = useState(null)         // { type, text }
+  const [section, setSection] = useState('hero')
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/admin-api/site-content/`, { headers: { 'X-Admin-Token': token } })
+      if (res.ok) setData(await res.json())
+    } finally { setLoading(false) }
+  }, [token])
+
+  useEffect(() => { load() }, [load])
+
+  async function save(key, content) {
+    setSaving(key); setMsg(null)
+    try {
+      const res = await fetch(`${API}/admin-api/site-content/`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ key, content }),
+      })
+      const d = await res.json()
+      if (res.ok) {
+        setMsg({ type: 'ok', text: `✅ บันทึก "${key}" สำเร็จ` })
+        load()
+      } else {
+        setMsg({ type: 'err', text: `❌ ${d.detail}` })
+      }
+    } catch { setMsg({ type: 'err', text: '❌ เชื่อมต่อไม่ได้' }) }
+    finally { setSaving(null) }
+  }
+
+  async function resetKey(key) {
+    if (!confirm(`รีเซ็ต "${key}" กลับเป็นค่าเริ่มต้น?`)) return
+    setSaving(key); setMsg(null)
+    try {
+      const res = await fetch(`${API}/admin-api/site-content/`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ key }),
+      })
+      const d = await res.json()
+      if (res.ok) { setMsg({ type: 'ok', text: `✅ ${d.detail}` }); load() }
+      else setMsg({ type: 'err', text: `❌ ${d.detail}` })
+    } catch { setMsg({ type: 'err', text: '❌ เชื่อมต่อไม่ได้' }) }
+    finally { setSaving(null) }
+  }
+
+  if (loading) return <div className={styles.loading}>กำลังโหลด...</div>
+  if (!data) return null
+
+  const sections = [
+    { key: 'hero', label: '🦸 Hero' },
+    { key: 'stats', label: '📊 Stats' },
+    { key: 'deals', label: '🛒 Deals' },
+    { key: 'articles', label: '📖 Articles' },
+  ]
+
+  return (
+    <div className={styles.siteEditorWrap}>
+      <div className={styles.siteEditorHeader}>
+        <h2 className={styles.sectionTitle}>🌐 แก้ไขหน้าเว็บ</h2>
+        <p className={styles.siteEditorNote}>แก้ไขเนื้อหาที่แสดงบนหน้าแรก — มีผลทันทีหลังบันทึก</p>
+      </div>
+
+      {msg && (
+        <div className={`${styles.demoMsg} ${msg.type === 'ok' ? styles.demoMsgOk : styles.demoMsgErr}`}>
+          {msg.text}
+        </div>
+      )}
+
+      <div className={styles.siteEditorTabs}>
+        {sections.map(s => (
+          <button key={s.key}
+            className={`${styles.siteEditorTab} ${section === s.key ? styles.siteEditorTabActive : ''}`}
+            onClick={() => setSection(s.key)}>
+            {s.label}
+            {data[s.key]?.is_custom && <span className={styles.customDot} title="แก้ไขแล้ว">●</span>}
+          </button>
+        ))}
+      </div>
+
+      {section === 'hero' && (
+        <HeroEditor content={data.hero?.content} saving={saving === 'hero'}
+          onSave={c => save('hero', c)} onReset={() => resetKey('hero')} />
+      )}
+      {section === 'stats' && (
+        <StatsEditor content={data.stats?.content} saving={saving === 'stats'}
+          onSave={c => save('stats', c)} onReset={() => resetKey('stats')} />
+      )}
+      {section === 'deals' && (
+        <ListEditor contentKey="deals" content={data.deals?.content} saving={saving === 'deals'}
+          onSave={c => save('deals', c)} onReset={() => resetKey('deals')}
+          fields={[
+            { key:'emoji', label:'Emoji', placeholder:'💡' },
+            { key:'title', label:'ชื่อสินค้า', placeholder:'ไฟ Ring Light' },
+            { key:'desc', label:'คำอธิบาย', placeholder:'แสงสวย...' },
+            { key:'price', label:'ราคา', placeholder:'฿299' },
+            { key:'badge', label:'Badge', placeholder:'ขายดี' },
+            { key:'url', label:'URL', placeholder:'/deals' },
+          ]}
+          newItem={{ emoji:'🆕', title:'', desc:'', price:'', badge:'', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)', url:'/deals' }}
+        />
+      )}
+      {section === 'articles' && (
+        <ListEditor contentKey="articles" content={data.articles?.content} saving={saving === 'articles'}
+          onSave={c => save('articles', c)} onReset={() => resetKey('articles')}
+          fields={[
+            { key:'cat', label:'หมวดหมู่', placeholder:'เทคนิค TikTok' },
+            { key:'catColor', label:'สี Badge', placeholder:'#FF7A00' },
+            { key:'title', label:'หัวข้อบทความ', placeholder:'10 วิธี...' },
+            { key:'excerpt', label:'บทย่อ', placeholder:'เทคนิคที่...' },
+            { key:'readTime', label:'เวลาอ่าน', placeholder:'5 นาที' },
+            { key:'url', label:'URL', placeholder:'/articles/slug' },
+          ]}
+          newItem={{ cat:'', catColor:'#FF7A00', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)', title:'', excerpt:'', readTime:'5 นาที', url:'/articles' }}
+        />
+      )}
+    </div>
+  )
+}
+
+function HeroEditor({ content, saving, onSave, onReset }) {
+  const [form, setForm] = useState(content || {})
+  useEffect(() => { if (content) setForm(content) }, [content])
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const fields = [
+    { key:'badge', label:'Badge Text', ph:'มีร้านค้าใช้งานแล้ว 1,000+ ร้าน' },
+    { key:'title_line1', label:'หัวข้อบรรทัด 1', ph:'สร้างคลิปขายของ' },
+    { key:'title_accent', label:'หัวข้อ Accent (สีส้ม)', ph:'TikTok อัตโนมัติ' },
+    { key:'title_sub', label:'หัวข้อย่อย', ph:'ด้วย AI ใน 60 วินาที' },
+    { key:'desc', label:'คำอธิบาย', ph:'ใส่สินค้า → AI เขียนสคริปต์...', multiline: true },
+    { key:'cta_primary', label:'ปุ่มหลัก', ph:'สมัครฟรี — ลองสร้าง 1 คลิป' },
+    { key:'cta_secondary', label:'ปุ่มรอง', ph:'เข้าระบบสร้างคลิป →' },
+    { key:'note', label:'หมายเหตุใต้ปุ่ม', ph:'✓ ฟรี 1 คลิปแรก · ✓ ไม่ต้องบัตรเครดิต...' },
+  ]
+
+  return (
+    <div className={styles.editorBlock}>
+      {fields.map(f => (
+        <div key={f.key} className={styles.editorField}>
+          <label className={styles.editorLabel}>{f.label}</label>
+          {f.multiline ? (
+            <textarea className={styles.editorTextarea} rows={3} placeholder={f.ph}
+              value={form[f.key] || ''} onChange={e => set(f.key, e.target.value)} />
+          ) : (
+            <input className={styles.editorInput} type="text" placeholder={f.ph}
+              value={form[f.key] || ''} onChange={e => set(f.key, e.target.value)} />
+          )}
+        </div>
+      ))}
+      <div className={styles.editorActions}>
+        <button className={styles.editorSave} onClick={() => onSave(form)} disabled={saving}>
+          {saving ? '⏳ กำลังบันทึก...' : '💾 บันทึก Hero'}
+        </button>
+        <button className={styles.editorReset} onClick={onReset} disabled={saving}>↺ รีเซ็ต</button>
+      </div>
+    </div>
+  )
+}
+
+function StatsEditor({ content, saving, onSave, onReset }) {
+  const [rows, setRows] = useState(content || [])
+  useEffect(() => { if (content) setRows(content) }, [content])
+  const setRow = (i, k, v) => setRows(r => r.map((row, idx) => idx === i ? { ...row, [k]: v } : row))
+
+  return (
+    <div className={styles.editorBlock}>
+      {rows.map((row, i) => (
+        <div key={i} className={styles.editorRow}>
+          <div className={styles.editorField} style={{ flex: '0 0 140px' }}>
+            <label className={styles.editorLabel}>ตัวเลข {i + 1}</label>
+            <input className={styles.editorInput} value={row.value || ''} placeholder="1,000+"
+              onChange={e => setRow(i, 'value', e.target.value)} />
+          </div>
+          <div className={styles.editorField} style={{ flex: 1 }}>
+            <label className={styles.editorLabel}>ป้ายกำกับ</label>
+            <input className={styles.editorInput} value={row.label || ''} placeholder="ร้านค้าใช้งาน"
+              onChange={e => setRow(i, 'label', e.target.value)} />
+          </div>
+        </div>
+      ))}
+      <div className={styles.editorActions}>
+        <button className={styles.editorSave} onClick={() => onSave(rows)} disabled={saving}>
+          {saving ? '⏳ กำลังบันทึก...' : '💾 บันทึก Stats'}
+        </button>
+        <button className={styles.editorReset} onClick={onReset} disabled={saving}>↺ รีเซ็ต</button>
+      </div>
+    </div>
+  )
+}
+
+function ListEditor({ content, saving, onSave, onReset, fields, newItem }) {
+  const [items, setItems] = useState(content || [])
+  useEffect(() => { if (content) setItems(content) }, [content])
+
+  const setField = (i, k, v) => setItems(arr => arr.map((item, idx) => idx === i ? { ...item, [k]: v } : item))
+  const remove = (i) => setItems(arr => arr.filter((_, idx) => idx !== i))
+  const add = () => setItems(arr => [...arr, { ...newItem, id: Date.now() }])
+
+  return (
+    <div className={styles.editorBlock}>
+      {items.map((item, i) => (
+        <div key={item.id || i} className={styles.listEditorCard}>
+          <div className={styles.listEditorCardTop}>
+            <span className={styles.listEditorIdx}>#{i + 1}</span>
+            <button className={styles.listEditorDel} onClick={() => remove(i)}>🗑 ลบ</button>
+          </div>
+          <div className={styles.listEditorFields}>
+            {fields.map(f => (
+              <div key={f.key} className={styles.editorField}>
+                <label className={styles.editorLabel}>{f.label}</label>
+                <input className={styles.editorInput} placeholder={f.placeholder}
+                  value={item[f.key] || ''} onChange={e => setField(i, f.key, e.target.value)} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <button className={styles.listEditorAdd} onClick={add}>+ เพิ่มรายการ</button>
+      <div className={styles.editorActions}>
+        <button className={styles.editorSave} onClick={() => onSave(items)} disabled={saving}>
+          {saving ? '⏳ กำลังบันทึก...' : '💾 บันทึก'}
+        </button>
+        <button className={styles.editorReset} onClick={onReset} disabled={saving}>↺ รีเซ็ต</button>
+      </div>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────
 // Dashboard
 // ──────────────────────────────────────────────
 function Dashboard({ token }) {
@@ -511,6 +763,7 @@ function Dashboard({ token }) {
     { key: 'chats', label: '💬 Chats', badge: stats?.chats_unread },
     { key: 'credits', label: '💳 Credits' },
     { key: 'demos', label: '🎬 Demo Clips' },
+    { key: 'site', label: '🌐 หน้าเว็บ' },
   ]
 
   return (
@@ -574,6 +827,12 @@ function Dashboard({ token }) {
       {tab === 'demos' && (
         <div className={styles.content}>
           <DemoClipsSection token={token} />
+        </div>
+      )}
+
+      {tab === 'site' && (
+        <div className={styles.content}>
+          <SiteEditor token={token} />
         </div>
       )}
 

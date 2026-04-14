@@ -2,25 +2,39 @@
 import { useState, useRef, useEffect } from 'react'
 import styles from './page.module.css'
 
-const AFFILIATE_PRODUCTS = [
-  { id:1, emoji:'💡', title:'ไฟ Ring Light LED', desc:'แสงสวย เซลฟี่คลิปชัด ขายของออนไลน์ดูน่าเชื่อถือขึ้น', price:'฿299', badge:'ขายดี', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)' },
-  { id:2, emoji:'🎙️', title:'ไมโครโฟน Clip-on', desc:'เสียงพากย์ใสชัด ไม่มีเสียงรบกวน เหมาะกับ TikTok Live', price:'฿490', badge:'แนะนำ', bg:'linear-gradient(135deg,#F5F3FF,#DDD6FE)' },
-  { id:3, emoji:'📱', title:'ขาตั้งโทรศัพท์', desc:'ถ่ายคลิปคนเดียวได้ มุมกล้องปรับได้ 360 องศา', price:'฿199', badge:'ใหม่', bg:'linear-gradient(135deg,#F0F9FF,#BAE6FD)' },
-  { id:4, emoji:'🎬', title:'Green Screen ผ้าพื้นเขียว', desc:'เปลี่ยนแบ็คกราวนด์ได้ทุกแบบ ทำ effect ดูโปร', price:'฿350', badge:'ฮิต', bg:'linear-gradient(135deg,#F0FDF4,#BBF7D0)' },
+// ── static defaults ────────────────────────────────────────────────
+const DEFAULT_DEALS = [
+  { id:1, emoji:'💡', title:'ไฟ Ring Light LED', desc:'แสงสวย เซลฟี่คลิปชัด ขายของออนไลน์ดูน่าเชื่อถือขึ้น', price:'฿299', badge:'ขายดี', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)', url:'/deals' },
+  { id:2, emoji:'🎙️', title:'ไมโครโฟน Clip-on', desc:'เสียงพากย์ใสชัด ไม่มีเสียงรบกวน เหมาะกับ TikTok Live', price:'฿490', badge:'แนะนำ', bg:'linear-gradient(135deg,#F5F3FF,#DDD6FE)', url:'/deals' },
+  { id:3, emoji:'📱', title:'ขาตั้งโทรศัพท์', desc:'ถ่ายคลิปคนเดียวได้ มุมกล้องปรับได้ 360 องศา', price:'฿199', badge:'ใหม่', bg:'linear-gradient(135deg,#F0F9FF,#BAE6FD)', url:'/deals' },
+  { id:4, emoji:'🎬', title:'Green Screen ผ้าพื้นเขียว', desc:'เปลี่ยนแบ็คกราวนด์ได้ทุกแบบ ทำ effect ดูโปร', price:'฿350', badge:'ฮิต', bg:'linear-gradient(135deg,#F0FDF4,#BBF7D0)', url:'/deals' },
 ]
 
-const ARTICLES = [
-  { id:1, cat:'เทคนิค TikTok', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)', catColor:'#FF7A00', title:'10 วิธีเพิ่มยอดวิวคลิปสินค้าบน TikTok ให้ได้ล้านวิวใน 2025', excerpt:'เทคนิคที่ร้านค้าหลายร้านใช้จนยอดขายพุ่ง ปรับได้ทันที ไม่ต้องใช้ทักษะตัดต่อ', readTime:'5 นาที' },
-  { id:2, cat:'สคริปต์คลิป', bg:'linear-gradient(135deg,#F5F3FF,#DDD6FE)', catColor:'#7C3AED', title:'สูตรเขียนสคริปต์ขายของสไตล์ Viral — Hook 3 วินาทีแรกต้องทำให้หยุดเลื่อน', excerpt:'โครงสร้างสคริปต์ที่ AI ของเราใช้ พร้อมตัวอย่างคลิปขายดีจริงของลูกค้า', readTime:'7 นาที' },
-  { id:3, cat:'เพิ่มยอดขาย', bg:'linear-gradient(135deg,#F0FDF4,#BBF7D0)', catColor:'#059669', title:'เปรียบเทียบ: ร้านที่ใช้ AI สร้างคลิปกับร้านที่ถ่ายเองธรรมดา ต่างกันแค่ไหน?', excerpt:'เคสจริงจากร้านค้าใน ClipDD วิเคราะห์ยอดวิว engagement และ conversion', readTime:'6 นาที' },
+const DEFAULT_ARTICLES = [
+  { id:1, cat:'เทคนิค TikTok', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)', catColor:'#FF7A00', title:'10 วิธีเพิ่มยอดวิวคลิปสินค้าบน TikTok ให้ได้ล้านวิวใน 2025', excerpt:'เทคนิคที่ร้านค้าหลายร้านใช้จนยอดขายพุ่ง ปรับได้ทันที ไม่ต้องใช้ทักษะตัดต่อ', readTime:'5 นาที', url:'/articles' },
+  { id:2, cat:'สคริปต์คลิป', bg:'linear-gradient(135deg,#F5F3FF,#DDD6FE)', catColor:'#7C3AED', title:'สูตรเขียนสคริปต์ขายของสไตล์ Viral — Hook 3 วินาทีแรกต้องทำให้หยุดเลื่อน', excerpt:'โครงสร้างสคริปต์ที่ AI ของเราใช้ พร้อมตัวอย่างคลิปขายดีจริงของลูกค้า', readTime:'7 นาที', url:'/articles' },
+  { id:3, cat:'เพิ่มยอดขาย', bg:'linear-gradient(135deg,#F0FDF4,#BBF7D0)', catColor:'#059669', title:'เปรียบเทียบ: ร้านที่ใช้ AI สร้างคลิปกับร้านที่ถ่ายเองธรรมดา ต่างกันแค่ไหน?', excerpt:'เคสจริงจากร้านค้าใน ClipDD วิเคราะห์ยอดวิว engagement และ conversion', readTime:'6 นาที', url:'/articles' },
 ]
 
-const STATS = [
+const DEFAULT_STATS = [
   { value: '1,000+', label: 'ร้านค้าใช้งาน' },
   { value: '50,000+', label: 'คลิปที่สร้างแล้ว' },
   { value: '< 1 นาที', label: 'เวลาสร้างคลิป' },
   { value: '4.9 ★', label: 'คะแนนความพึงพอใจ' },
 ]
+
+const DEFAULT_HERO = {
+  badge: 'มีร้านค้าใช้งานแล้ว 1,000+ ร้าน',
+  title_line1: 'สร้างคลิปขายของ',
+  title_accent: 'TikTok อัตโนมัติ',
+  title_sub: 'ด้วย AI ใน 60 วินาที',
+  desc: 'ใส่สินค้า → AI เขียนสคริปต์ + พากย์เสียง + ตัดต่อวิดีโอให้อัตโนมัติ\nไม่ต้องมีทักษะตัดต่อ · ไม่ต้องจ้างช่างวิดีโอ',
+  cta_primary: 'สมัครฟรี — ลองสร้าง 1 คลิป',
+  cta_secondary: 'เข้าระบบสร้างคลิป →',
+  note: '✓ ฟรี 1 คลิปแรก · ✓ ไม่ต้องบัตรเครดิต · ✓ เริ่มได้ทันที',
+}
+
+const STATS = DEFAULT_STATS
 
 const CLIP_STYLES = [
   { id: 'all',     label: '🔥 ทั้งหมด' },
@@ -86,6 +100,20 @@ function AnimSection({ children, className }) {
 
 export default function Home() {
   const [activeStyle, setActiveStyle] = useState('all')
+  const [hero, setHero] = useState(DEFAULT_HERO)
+  const [stats, setStats] = useState(DEFAULT_STATS)
+  const [deals, setDeals] = useState(DEFAULT_DEALS)
+  const [articles, setArticles] = useState(DEFAULT_ARTICLES)
+
+  useEffect(() => {
+    fetch('/api/site-content/').then(r => r.ok ? r.json() : null).then(data => {
+      if (!data) return
+      if (data.hero) setHero(data.hero)
+      if (data.stats?.length) setStats(data.stats)
+      if (data.deals?.length) setDeals(data.deals)
+      if (data.articles?.length) setArticles(data.articles)
+    }).catch(() => {})
+  }, [])
 
   const filtered = activeStyle === 'all'
     ? EXAMPLE_CLIPS
@@ -117,30 +145,31 @@ export default function Home() {
         <AnimSection>
           <div className={styles.heroBadge}>
             <span className={styles.heroBadgeDot} />
-            🔥 มีร้านค้าใช้งานแล้ว 1,000+ ร้าน
+            🔥 {hero.badge}
           </div>
           <h1 className={styles.heroTitle}>
-            สร้างคลิปขายของ<br />
-            <span className={styles.heroAccent}>TikTok อัตโนมัติ</span><br />
-            <span style={{ fontSize:'65%', fontWeight:700, color:'#6B7280' }}>ด้วย AI ใน 60 วินาที</span>
+            {hero.title_line1}<br />
+            <span className={styles.heroAccent}>{hero.title_accent}</span><br />
+            <span style={{ fontSize:'65%', fontWeight:700, color:'#6B7280' }}>{hero.title_sub}</span>
           </h1>
           <p className={styles.heroDesc}>
-            ใส่สินค้า → AI เขียนสคริปต์ + พากย์เสียง + ตัดต่อวิดีโอให้อัตโนมัติ<br />
-            ไม่ต้องมีทักษะตัดต่อ · ไม่ต้องจ้างช่างวิดีโอ
+            {hero.desc.split('\n').map((line, i) => <span key={i}>{line}{i === 0 && <br />}</span>)}
           </p>
           <div className={styles.heroActions}>
             <a href="/register" className={styles.heroPrimary}>
-              สมัครฟรี — ลองสร้าง 1 คลิป
+              {hero.cta_primary}
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
             </a>
             <a href="/create" className={styles.heroSecondary}>
-              เข้าระบบสร้างคลิป →
+              {hero.cta_secondary}
             </a>
           </div>
           <p className={styles.heroNote}>
-            <span>✓ ฟรี 1 คลิปแรก</span> &nbsp;·&nbsp; <span>✓ ไม่ต้องบัตรเครดิต</span> &nbsp;·&nbsp; <span>✓ เริ่มได้ทันที</span>
+            {hero.note.split('·').map((s, i) => (
+              <span key={i}>{i > 0 && <>&nbsp;·&nbsp;</>}<span>{s.trim()}</span></span>
+            ))}
           </p>
         </AnimSection>
 
@@ -166,7 +195,7 @@ export default function Home() {
       {/* ── STATS ── */}
       <div className={styles.stats}>
         <div className={styles.statsInner}>
-          {STATS.map(s => (
+          {stats.map(s => (
             <div key={s.label}>
               <span className={styles.statValue}>{s.value}</span>
               <span className={styles.statLabel}>{s.label}</span>
@@ -230,7 +259,7 @@ export default function Home() {
             <a href="/deals" className={styles.sectionMore}>ดูดีลทั้งหมด →</a>
           </div>
           <div className={styles.dealsGrid}>
-            {AFFILIATE_PRODUCTS.map(p => (
+            {deals.map(p => (
               <div key={p.id} className={styles.dealCard}>
                 <div className={styles.dealThumb} style={{ background: p.bg }}>{p.emoji}</div>
                 <div className={styles.dealBody}>
@@ -239,7 +268,7 @@ export default function Home() {
                   <p className={styles.dealDesc}>{p.desc}</p>
                   <div className={styles.dealFooter}>
                     <span className={styles.dealPrice}>{p.price}</span>
-                    <a href="/deals" className={styles.dealBtn}>ดูราคา</a>
+                    <a href={p.url || '/deals'} className={styles.dealBtn}>ดูราคา</a>
                   </div>
                 </div>
               </div>
@@ -256,7 +285,7 @@ export default function Home() {
             <a href="/articles" className={styles.sectionMore}>ดูทั้งหมด →</a>
           </div>
           <div className={styles.articlesGrid}>
-            {ARTICLES.map(a => (
+            {articles.map(a => (
               <article key={a.id} className={styles.articleCard}>
                 <div className={styles.articleCover} style={{ background: a.bg }} />
                 <div className={styles.articleBody}>
@@ -265,7 +294,7 @@ export default function Home() {
                   <p className={styles.articleExcerpt}>{a.excerpt}</p>
                   <div className={styles.articleFooter}>
                     <span className={styles.articleRead}>⏱ {a.readTime}</span>
-                    <a href="/articles" className={styles.articleBtn}>อ่านต่อ →</a>
+                    <a href={a.url || '/articles'} className={styles.articleBtn}>อ่านต่อ →</a>
                   </div>
                 </div>
               </article>

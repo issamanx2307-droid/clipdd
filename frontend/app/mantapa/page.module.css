@@ -230,3 +230,61 @@
 }
 .demoUploadBtn:hover { background: rgba(99,102,241,0.35); }
 .demoUploadBtnLoading { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Site Editor ── */
+.siteEditorWrap { display: flex; flex-direction: column; gap: 20px; }
+.siteEditorHeader { display: flex; flex-direction: column; gap: 4px; }
+.siteEditorNote { font-size: 13px; color: #888; margin: 0; }
+
+.siteEditorTabs { display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid #222; padding-bottom: 12px; }
+.siteEditorTab {
+  background: transparent; border: 1px solid #333; color: #888;
+  padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  font-weight: 500; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.siteEditorTab:hover { border-color: #555; color: #ccc; }
+.siteEditorTabActive { border-color: #7c3aed; color: #a78bfa; background: rgba(124,58,237,0.1); }
+.customDot { color: #f59e0b; font-size: 10px; }
+
+.editorBlock { display: flex; flex-direction: column; gap: 16px; background: #111; border: 1px solid #222; border-radius: 12px; padding: 20px; }
+.editorRow { display: flex; gap: 12px; }
+.editorField { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.editorLabel { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.4px; }
+.editorInput {
+  background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+  padding: 10px 14px; color: #fff; font-size: 14px; outline: none; transition: border-color 0.15s;
+}
+.editorInput:focus { border-color: #7c3aed; }
+.editorTextarea {
+  background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+  padding: 10px 14px; color: #fff; font-size: 14px; outline: none; resize: vertical; transition: border-color 0.15s;
+}
+.editorTextarea:focus { border-color: #7c3aed; }
+
+.editorActions { display: flex; gap: 10px; padding-top: 4px; }
+.editorSave {
+  background: #7c3aed; color: #fff; border: none; border-radius: 8px;
+  padding: 10px 22px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.editorSave:hover:not(:disabled) { background: #6d28d9; }
+.editorSave:disabled { opacity: 0.5; cursor: not-allowed; }
+.editorReset {
+  background: transparent; border: 1px solid #333; color: #888;
+  border-radius: 8px; padding: 10px 18px; font-size: 13px; cursor: pointer; transition: all 0.15s;
+}
+.editorReset:hover:not(:disabled) { border-color: #555; color: #ccc; }
+.editorReset:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* List Editor (Deals / Articles) */
+.listEditorCard { background: #161616; border: 1px solid #222; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.listEditorCardTop { display: flex; align-items: center; justify-content: space-between; }
+.listEditorIdx { font-size: 12px; font-weight: 700; color: #666; }
+.listEditorDel { background: transparent; border: 1px solid #333; color: #f87171; border-radius: 6px; padding: 4px 12px; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.listEditorDel:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
+.listEditorFields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media(max-width: 600px) { .listEditorFields { grid-template-columns: 1fr; } }
+.listEditorAdd {
+  background: transparent; border: 1px dashed #444; color: #888;
+  border-radius: 8px; padding: 10px; font-size: 14px; cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.listEditorAdd:hover { border-color: #7c3aed; color: #a78bfa; }
