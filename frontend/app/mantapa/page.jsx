@@ -882,6 +882,90 @@ function ListEditor({ content, saving, onSave, onReset, fields, newItem }) {
 }
 
 // ──────────────────────────────────────────────
+// Credit Alerts — แสดงเตือนบน Dashboard ถ้า AI ไหนเครดิตหมด/ต่ำ
+// ──────────────────────────────────────────────
+function CreditAlerts({ token }) {
+  const [alerts, setAlerts] = useState([])
+
+  async function check() {
+    try {
+      const res = await fetch(`${API}/admin-api/credits/`, { headers: { 'X-Admin-Token': token } })
+      if (!res.ok) return
+      const d = await res.json()
+      const found = []
+
+      // OpenAI
+      if (d.openai?.status === 'error') {
+        found.push({ key: 'openai', level: 'error', icon: '🤖', name: 'OpenAI', msg: d.openai.detail || 'เชื่อมต่อไม่ได้' })
+      } else if (d.openai?.remaining_usd != null && d.openai.remaining_usd < 2) {
+        found.push({ key: 'openai-low', level: 'warn', icon: '🤖', name: 'OpenAI', msg: `เครดิตเหลือน้อย $${Number(d.openai.remaining_usd).toFixed(2)} — ควรเติมเงิน` })
+      }
+
+      // Fal.ai
+      if (d.fal?.status === 'error') {
+        found.push({ key: 'fal', level: 'error', icon: '⚡', name: 'Fal.ai', msg: d.fal.detail || 'เชื่อมต่อไม่ได้ / เครดิตหมด' })
+      } else if (d.fal?.balance != null && d.fal.balance < 1) {
+        found.push({ key: 'fal-low', level: 'warn', icon: '⚡', name: 'Fal.ai', msg: `เครดิตเหลือน้อย $${Number(d.fal.balance).toFixed(2)} — ควรเติมเงิน` })
+      }
+
+      // Gemini
+      if (d.gemini?.key_valid === false) {
+        found.push({ key: 'gemini', level: 'error', icon: '✨', name: 'Gemini', msg: d.gemini.detail || 'API Key ไม่ถูกต้อง' })
+      }
+
+      // Botnoi
+      if (d.botnoi?.status === 'error') {
+        found.push({ key: 'botnoi', level: 'error', icon: '🗣️', name: 'Botnoi TTS', msg: d.botnoi.detail || 'เชื่อมต่อไม่ได้' })
+      }
+
+      setAlerts(found)
+    } catch {}
+  }
+
+  useEffect(() => {
+    check()
+    const iv = setInterval(check, 60000)  // re-check ทุก 1 นาที
+    return () => clearInterval(iv)
+  }, [token])
+
+  if (alerts.length === 0) return null
+
+  return (
+    <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {alerts.map(a => (
+        <div key={a.key} style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '12px 16px', borderRadius: 10,
+          background: a.level === 'error' ? 'rgba(220,38,38,.12)' : 'rgba(217,119,6,.12)',
+          border: `1px solid ${a.level === 'error' ? 'rgba(220,38,38,.4)' : 'rgba(217,119,6,.4)'}`,
+        }}>
+          <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{a.level === 'error' ? '🚨' : '⚠️'}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{
+              fontWeight: 700, fontSize: '0.85rem',
+              color: a.level === 'error' ? '#fca5a5' : '#fcd34d',
+              marginRight: 8,
+            }}>
+              {a.icon} {a.name}
+            </span>
+            <span style={{ fontSize: '0.83rem', color: a.level === 'error' ? '#fca5a5' : '#fcd34d', opacity: 0.85 }}>
+              {a.msg}
+            </span>
+          </div>
+          <a
+            href="#"
+            onClick={e => { e.preventDefault(); check() }}
+            style={{ fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'none', flexShrink: 0 }}
+          >
+            ↻ refresh
+          </a>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────
 // Maintenance Toggle
 // ──────────────────────────────────────────────
 function MaintenanceToggle({ token }) {
@@ -1001,6 +1085,7 @@ function Dashboard({ token }) {
 
       {tab === 'dashboard' && (
         <div className={styles.content}>
+          <CreditAlerts token={token} />
           <MaintenanceToggle token={token} />
           <div className={styles.statsGrid}>
             <StatCard icon="👥" label="Users ทั้งหมด" value={stats?.users_total} sub={`+${stats?.users_today ?? 0} วันนี้`} />
