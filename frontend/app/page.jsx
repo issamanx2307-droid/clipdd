@@ -55,11 +55,48 @@ const EXAMPLE_CLIPS = [
 ]
 
 const DEMO_VIDEOS = [
-  { slot:'urgent', label:'เร่งด่วน', badge:'#FF7A00', title:'Flash Sale / FOMO สูง' },
-  { slot:'review', label:'รีวิว',    badge:'#7C3AED', title:'น่าเชื่อถือ บอกต่อ' },
-  { slot:'drama',  label:'ดราม่า',   badge:'#EF4444', title:'Before/After อารมณ์แรง' },
-  { slot:'unbox',  label:'Unboxing', badge:'#0EA5E9', title:'เปิดกล่อง reveal' },
+  { slot:'urgent', label:'เร่งด่วน', badge:'#FF7A00', title:'Flash Sale / FOMO สูง',      bg:'linear-gradient(135deg,#FFF7ED,#FDBA74)', emoji:'⚡' },
+  { slot:'review', label:'รีวิว',    badge:'#7C3AED', title:'น่าเชื่อถือ บอกต่อ',         bg:'linear-gradient(135deg,#F5F3FF,#C4B5FD)', emoji:'⭐' },
+  { slot:'drama',  label:'ดราม่า',   badge:'#EF4444', title:'Before/After อารมณ์แรง',     bg:'linear-gradient(135deg,#FFF1F2,#FCA5A5)', emoji:'😱' },
+  { slot:'unbox',  label:'Unboxing', badge:'#0EA5E9', title:'เปิดกล่อง reveal',            bg:'linear-gradient(135deg,#F0F9FF,#7DD3FC)', emoji:'📦' },
 ]
+
+function VideoCard({ slot, label, badge, title, bg, emoji }) {
+  const vidRef = useRef(null)
+  const [playing, setPlaying] = useState(false)
+
+  function play() {
+    const v = vidRef.current
+    if (!v) return
+    v.play().then(() => setPlaying(true)).catch(() => {})
+  }
+  function stop() {
+    const v = vidRef.current
+    if (!v) return
+    v.pause(); v.currentTime = 0; setPlaying(false)
+  }
+
+  return (
+    <div className={styles.heroCard}
+      onMouseEnter={play} onMouseLeave={stop}
+      onClick={() => playing ? stop() : play()}>
+      <div className={styles.heroCardThumb}>
+        <div className={styles.heroCardPlaceholder} style={{ background: bg, opacity: playing ? 0 : 1 }}>
+          <span className={styles.heroCardEmoji}>{emoji}</span>
+        </div>
+        <video ref={vidRef} src={`/media/demos/${slot}.mp4`}
+          className={styles.heroCardVideo} style={{ opacity: playing ? 1 : 0 }}
+          muted loop playsInline preload="none" />
+        <span className={styles.heroCardBadgeOverlay} style={{ background: badge + '22', color: badge }}>
+          {label}
+        </span>
+      </div>
+      <div className={styles.heroCardBody}>
+        <p className={styles.heroCardTitle}>{title}</p>
+      </div>
+    </div>
+  )
+}
 
 const PLANS = [
   {
@@ -173,25 +210,9 @@ export default function Home() {
           </p>
         </AnimSection>
 
-        {/* RIGHT — 2×2 demo video cards */}
+        {/* RIGHT — 2×2 demo video cards (hover to play) */}
         <div className={styles.heroCards}>
-          {DEMO_VIDEOS.map(v => (
-            <div key={v.slot} className={styles.heroCard}>
-              <div className={styles.heroCardThumb}>
-                <video
-                  src={`/media/demos/${v.slot}.mp4`}
-                  className={styles.heroCardVideo}
-                  autoPlay muted loop playsInline
-                />
-                <span className={styles.heroCardBadgeOverlay} style={{ background: v.badge + '22', color: v.badge }}>
-                  {v.label}
-                </span>
-              </div>
-              <div className={styles.heroCardBody}>
-                <p className={styles.heroCardTitle}>{v.title}</p>
-              </div>
-            </div>
-          ))}
+          {DEMO_VIDEOS.map(v => <VideoCard key={v.slot} {...v} />)}
         </div>
       </section>
 
