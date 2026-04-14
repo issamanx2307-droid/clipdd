@@ -147,7 +147,7 @@
 }
 .heroCard:hover { transform:translateY(-4px); box-shadow:0 8px 32px rgba(0,0,0,.12) }
 .heroCardThumb {
-  height: 140px;
+  aspect-ratio: 9 / 16;
   position: relative;
   overflow: hidden;
   cursor: pointer;
