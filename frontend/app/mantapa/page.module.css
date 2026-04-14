@@ -308,6 +308,9 @@
 .thumbItemInfo { padding: 8px 10px; }
 .thumbItemTitle { display: block; font-size: 12px; color: #e2e8f0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .thumbItemCat { display: block; font-size: 11px; color: #94a3b8; margin-top: 2px; }
+.thumbItemCaption { display: block; font-size: 11px; color: #cbd5e1; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thumbCaptionInput { width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; color: #e2e8f0; font-size: 13px; box-sizing: border-box; margin-bottom: 8px; outline: none; }
+.thumbCaptionInput:focus { border-color: #E53E3E; }
 .thumbDeleteBtn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.6); border: none; border-radius: 6px; padding: 4px 7px; font-size: 13px; cursor: pointer; transition: background .2s; }
 .thumbDeleteBtn:hover { background: rgba(239,68,68,.8); }
 .thumbCount { font-size: 12px; color: #94a3b8; margin: 0 0 12px; }

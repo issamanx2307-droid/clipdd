@@ -664,6 +664,7 @@ function ThumbnailManager({ token }) {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg] = useState(null)
+  const [caption, setCaption] = useState('')
   const fileRef = useRef(null)
 
   const load = useCallback(async () => {
@@ -682,6 +683,7 @@ function ThumbnailManager({ token }) {
     setUploading(true); setMsg(null)
     const fd = new FormData()
     fd.append('image', file)
+    fd.append('title', caption.trim())
     try {
       const res = await fetch(`${API}/admin-api/clip-thumbnails/`, {
         method: 'POST',
@@ -692,6 +694,7 @@ function ThumbnailManager({ token }) {
       if (res.ok) {
         setMsg({ ok: true, text: '✅ อัปโหลดสำเร็จ' })
         if (fileRef.current) fileRef.current.value = ''
+        setCaption('')
         load()
       } else {
         setMsg({ ok: false, text: `❌ ${d.detail}` })
@@ -726,6 +729,14 @@ function ThumbnailManager({ token }) {
       )}
 
       <form className={styles.thumbUploadForm} onSubmit={upload}>
+        <input
+          type="text"
+          className={styles.thumbCaptionInput}
+          placeholder="คำบรรยาย (ไม่บังคับ)"
+          value={caption}
+          onChange={e => setCaption(e.target.value)}
+          maxLength={200}
+        />
         <div className={styles.thumbUploadRow}>
           <input ref={fileRef} type="file" accept="video/mp4,video/mov,video/webm,video/quicktime,image/jpeg,image/png,image/gif,image/webp" className={styles.thumbFileInput} required />
           <button className={styles.thumbUploadBtn} type="submit" disabled={uploading}>
@@ -750,6 +761,7 @@ function ThumbnailManager({ token }) {
               }
               <div className={styles.thumbItemInfo}>
                 <span className={styles.thumbItemCat}>{t.file_type === 'video' ? '🎬 วิดีโอ' : '🖼️ รูปภาพ'}</span>
+                {t.title && <span className={styles.thumbItemCaption}>{t.title}</span>}
               </div>
               <button className={styles.thumbDeleteBtn} onClick={() => del(t.id)} title="ลบ">🗑️</button>
             </div>
