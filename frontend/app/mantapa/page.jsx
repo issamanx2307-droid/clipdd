@@ -171,13 +171,15 @@ function CreditsSection({ token }) {
         </CreditCard>
 
         <CreditCard name="Botnoi TTS" icon="🗣️" statusOk={botnoi.status === 'ok'}>
-          {botnoi.status === 'ok' && botnoi.balance != null && <>
-            <div className={styles.creditAmount}>{botnoi.balance}</div>
-            <div className={styles.creditDetail}>Token คงเหลือ</div>
-          </>}
-          {botnoi.status === 'ok' && botnoi.balance == null && <>
-            <div className={styles.creditAmount}>✅</div>
-            <div className={styles.creditDetail}>{botnoi.note}</div>
+          {botnoi.status === 'ok' && <>
+            <div className={styles.creditAmount}>✅ ใช้งานได้</div>
+            {botnoi.rate_remaining != null && <>
+              <div className={styles.creditDetail}>Rate limit: {botnoi.rate_remaining}/{botnoi.rate_limit} req/min</div>
+              <div className={styles.creditBar}>
+                <div className={styles.creditBarFill} style={{ width: `${Math.min(100, (Number(botnoi.rate_remaining) / Number(botnoi.rate_limit || 1)) * 100)}%`, background: '#f59e0b' }} />
+              </div>
+            </>}
+            <div className={styles.creditDetail} style={{ marginTop: 6 }}>{botnoi.note}</div>
           </>}
           {botnoi.status === 'error' && <div className={styles.creditErr}>{botnoi.detail}</div>}
         </CreditCard>
@@ -771,8 +773,16 @@ function ListEditor({ content, saving, onSave, onReset, fields, newItem }) {
 // ──────────────────────────────────────────────
 function Dashboard({ token }) {
   const [stats, setStats] = useState(null)
-  const [tab, setTab] = useState('dashboard')
+  const [tab, setTab] = useState(() => {
+    try { return localStorage.getItem('cd_admin_tab') || 'dashboard' } catch { return 'dashboard' }
+  })
   const [selectedChat, setSelectedChat] = useState(null)
+
+  function switchTab(key) {
+    try { localStorage.setItem('cd_admin_tab', key) } catch {}
+    setTab(key)
+    setSelectedChat(null)
+  }
 
   const loadStats = useCallback(async () => {
     const res = await fetch(`${API}/admin-api/dashboard/`, { headers: { 'X-Admin-Token': token } })
@@ -797,7 +807,7 @@ function Dashboard({ token }) {
         <div className={styles.tabs}>
           {tabs.map(t => (
             <button key={t.key} className={`${styles.tab} ${tab === t.key ? styles.tabActive : ''}`}
-              onClick={() => { setTab(t.key); setSelectedChat(null) }}>
+              onClick={() => switchTab(t.key)}>
               {t.label}
               {t.badge > 0 && <span className={styles.tabBadge}>{t.badge}</span>}
             </button>

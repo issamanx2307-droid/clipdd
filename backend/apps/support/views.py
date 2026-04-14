@@ -669,29 +669,43 @@ class AdminCreditsView(APIView):
         else:
             result['gemini'] = {'status': 'error', 'key_valid': False, 'detail': 'GEMINI_API_KEY ไม่ได้ตั้งค่า'}
 
-        # Botnoi (Thai TTS)
+        # Botnoi (Thai TTS) — test key by generating 1 char, read rate-limit headers
         botnoi_key = getattr(settings, 'BOTNOI_API_KEY', '')
         if botnoi_key:
             try:
+                import json as _json
+                botnoi_payload = _json.dumps({
+                    'text': 'ท', 'speaker': '1', 'volume': 1,
+                    'speed': 1, 'type_media': 'mp3', 'save_file': False,
+                }).encode()
                 req_b = urllib.request.Request(
-                    'https://api-voice.botnoi.ai/openapi/v1/get_token_user',
-                    headers={'botnoi-token': botnoi_key},
+                    'https://api-voice.botnoi.ai/openapi/v1/generate_audio',
+                    data=botnoi_payload,
+                    headers={
+                        'botnoi-token': botnoi_key,
+                        'Content-Type': 'application/json',
+                    },
+                    method='POST',
                 )
-                with urllib.request.urlopen(req_b, timeout=6) as rb:
-                    botnoi_data = json_lib.loads(rb.read())
-                    token_balance = botnoi_data.get('balance') or botnoi_data.get('token') or botnoi_data.get('credit')
+                with urllib.request.urlopen(req_b, timeout=10) as rb:
+                    rl_limit = rb.headers.get('ratelimit-limit') or rb.headers.get('x-ratelimit-limit-minute')
+                    rl_remaining = rb.headers.get('ratelimit-remaining') or rb.headers.get('x-ratelimit-remaining-minute')
                     result['botnoi'] = {
                         'status': 'ok',
                         'key_valid': True,
-                        'balance': token_balance,
-                        'note': 'Thai TTS — ดูที่ botnoi.ai',
+                        'rate_limit': rl_limit,
+                        'rate_remaining': rl_remaining,
+                        'note': 'ดูเครดิตจริงที่ botnoi.ai/dashboard',
                     }
-            except Exception:
-                result['botnoi'] = {
-                    'status': 'ok',
-                    'key_valid': True,
-                    'note': 'Key ตั้งค่าแล้ว — ดู token ที่ botnoi.ai/dashboard',
-                }
+            except urllib.error.HTTPError as e:
+                if e.code == 402:
+                    result['botnoi'] = {'status': 'error', 'key_valid': True, 'detail': 'เครดิตหมด (402 Payment Required)'}
+                elif e.code == 401:
+                    result['botnoi'] = {'status': 'error', 'key_valid': False, 'detail': 'Key ไม่ถูกต้อง (401)'}
+                else:
+                    result['botnoi'] = {'status': 'ok', 'key_valid': True, 'note': f'Key ใช้งานได้ (HTTP {e.code})'}
+            except Exception as ex:
+                result['botnoi'] = {'status': 'ok', 'key_valid': True, 'note': f'Key ตั้งค่าแล้ว — {str(ex)[:60]}'}
         else:
             result['botnoi'] = {'status': 'error', 'key_valid': False, 'detail': 'BOTNOI_API_KEY ไม่ได้ตั้งค่า'}
 

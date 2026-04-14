@@ -124,6 +124,9 @@ FAL_KEY = os.environ.get('FAL_KEY', '')
 # Gemini (AI Chat Support)
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 
+# Botnoi (Thai TTS)
+BOTNOI_API_KEY = os.environ.get('BOTNOI_API_KEY', '')
+
 # Admin Panel
 ADMIN_PANEL_PASSWORD = os.environ.get('ADMIN_PANEL_PASSWORD', 'mantapa2025')
 
