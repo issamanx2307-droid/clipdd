@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import styles from './page.module.css'
 
 // ── static defaults ────────────────────────────────────────────────
@@ -151,9 +151,15 @@ export default function Home() {
     }).catch(() => {})
   }, [])
 
-  const displayThumbs = activeStyle === 'all'
-    ? thumbs
-    : thumbs.filter(t => t.category === activeStyle)
+  // Shuffle once on load, show 6
+  const displayThumbs = useMemo(() => {
+    const arr = [...thumbs]
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr.slice(0, 6)
+  }, [thumbs])
 
   return (
     <main className={styles.main}>
@@ -245,11 +251,11 @@ export default function Home() {
         </div>
       </AnimSection>
 
-      {/* ── EXAMPLE CLIPS ── */}
+      {/* ── FUNNY CLIPS ── */}
       <AnimSection>
         <div className={styles.clipsSection}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>ตัวอย่างคลิปที่ AI สร้าง</h2>
+            <h2 className={styles.sectionTitle}>😂 รวมคลิปขำๆ</h2>
             <a href="/clips" className={styles.sectionMore}>ดูทั้งหมด →</a>
           </div>
           <div className={styles.clipsGrid}>
@@ -260,16 +266,12 @@ export default function Home() {
                     ? <img src={thumb.image_url} alt={thumb.title} className={styles.clipThumbImg} />
                     : <div className={styles.clipThumbPlaceholder} />
                   }
-                  {thumb?.category && (
-                    <span className={styles.clipStyleBadge} style={{ background: CAT_COLOR[thumb.category] || '#6B7280' }}>
-                      {CAT_LABEL[thumb.category] || thumb.category}
-                    </span>
-                  )}
                 </div>
-                <div className={styles.clipBody}>
-                  <p className={styles.clipTitle}>{thumb?.title || '\u00A0'}</p>
-                  <span className={styles.clipBtn}>ดูคลิปทั้งหมด</span>
-                </div>
+                {thumb?.title && (
+                  <div className={styles.clipBody}>
+                    <p className={styles.clipTitle}>{thumb.title}</p>
+                  </div>
+                )}
               </a>
             ))}
           </div>
