@@ -906,6 +906,8 @@ function CreditAlerts({ token }) {
         found.push({ key: 'fal', level: 'error', icon: '⚡', name: 'Fal.ai', msg: d.fal.detail || 'เชื่อมต่อไม่ได้ / เครดิตหมด' })
       } else if (d.fal?.balance != null && d.fal.balance < 1) {
         found.push({ key: 'fal-low', level: 'warn', icon: '⚡', name: 'Fal.ai', msg: `เครดิตเหลือน้อย $${Number(d.fal.balance).toFixed(2)} — ควรเติมเงิน` })
+      } else if (d.fal?.balance == null && d.fal?.status === 'ok') {
+        found.push({ key: 'fal-unknown', level: 'warn', icon: '⚡', name: 'Fal.ai', msg: 'ไม่ทราบยอดเครดิต — ตรวจสอบที่ fal.ai/dashboard/billing (อาจเหลือน้อยกว่า $1)' })
       }
 
       // Gemini

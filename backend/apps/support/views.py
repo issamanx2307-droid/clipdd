@@ -11,6 +11,7 @@ from django.conf import settings
 from django.utils import timezone
 from apps.video_engine.utils import absolute_media_url
 from .models import ChatSession, ChatMessage, SiteContent, ClipThumbnail
+from apps.video_engine.models import RenderJob
 
 logger = logging.getLogger(__name__)
 
@@ -669,12 +670,39 @@ class AdminCreditsView(APIView):
                     pass
 
             if 'fal' not in result:
-                result['fal'] = {
-                    'status': 'ok',
-                    'key_valid': True,
-                    'balance': balance,
-                    'note': 'ดู balance ที่ fal.ai/dashboard/billing',
-                }
+                # Balance API unavailable — check recent RenderJob failures for
+                # exhausted-balance / locked-account error strings from Kling/Fal
+                fal_error_msg = None
+                EXHAUSTED_KEYWORDS = ('exhausted', 'locked', 'billing', 'insufficient', 'quota exceeded', 'payment')
+                try:
+                    from datetime import timedelta
+                    cutoff = timezone.now() - timedelta(days=7)
+                    failed_jobs = RenderJob.objects.filter(
+                        status='failed',
+                        created_at__gte=cutoff,
+                    ).exclude(error='').order_by('-created_at').values_list('error', flat=True)[:20]
+                    for err_text in failed_jobs:
+                        if any(kw in err_text.lower() for kw in EXHAUSTED_KEYWORDS):
+                            fal_error_msg = err_text[:200]
+                            break
+                except Exception:
+                    pass
+
+                if fal_error_msg:
+                    result['fal'] = {
+                        'status': 'error',
+                        'key_valid': True,
+                        'balance': None,
+                        'detail': f'พบข้อผิดพลาดจาก Fal.ai: {fal_error_msg}',
+                        'note': 'ดู balance ที่ fal.ai/dashboard/billing',
+                    }
+                else:
+                    result['fal'] = {
+                        'status': 'ok',
+                        'key_valid': True,
+                        'balance': balance,   # None if API unavailable
+                        'note': 'ดู balance ที่ fal.ai/dashboard/billing',
+                    }
         else:
             result['fal'] = {'status': 'error', 'key_valid': False, 'detail': 'FAL_KEY ไม่ได้ตั้งค่า'}
 
