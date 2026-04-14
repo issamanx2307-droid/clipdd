@@ -123,6 +123,7 @@ function CreateInner() {
   const [error, setError]           = useState('')
   const [credits, setCredits]       = useState(null)
   const [isStaff, setIsStaff]       = useState(false)
+  const [maintenance, setMaintenance] = useState(false)
   const pollRef                     = useRef(null)
 
   useEffect(() => {
@@ -143,6 +144,12 @@ function CreateInner() {
       console.warn('Invalid cd_user in localStorage:', error)
       localStorage.removeItem('cd_user')
     }
+
+    // Check live maintenance status from server
+    fetch('/api/system-status/')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setMaintenance(d.maintenance === true) })
+      .catch(() => {})
 
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
@@ -297,7 +304,7 @@ function CreateInner() {
         {error && <div className={styles.error}>{error}</div>}
 
         {/* ══════════ MAINTENANCE BANNER ══════════ */}
-        {!isStaff && (
+        {maintenance && !isStaff && (
           <div style={{
             background: 'linear-gradient(135deg, #1a0a00, #2d1200)',
             border: '1px solid #92400e',

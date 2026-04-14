@@ -960,3 +960,11 @@ class AdminClipThumbnailView(APIView):
             return Response({'detail': 'ลบสำเร็จ'})
         except ClipThumbnail.DoesNotExist:
             return Response({'detail': 'ไม่พบ thumbnail'}, status=404)
+
+
+class SystemStatusView(APIView):
+    """Public — returns current system maintenance status."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({'maintenance': settings.MAINTENANCE_MODE})

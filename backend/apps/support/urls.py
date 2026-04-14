@@ -5,9 +5,11 @@ from .views import (
     AdminAIChatView, AdminCreditsView, AdminDemoClipView,
     PublicSiteContentView, AdminSiteContentView,
     PublicClipThumbnailView, AdminClipThumbnailView,
+    SystemStatusView,
 )
 
 urlpatterns = [
+    path('system-status/', SystemStatusView.as_view()),
     path('support/chat/', ChatView.as_view()),
     path('support/chat/poll/', ChatPollView.as_view()),
     path('site-content/', PublicSiteContentView.as_view()),

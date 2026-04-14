@@ -12,6 +12,9 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(','
 # Public site origin (no trailing slash) — absolute media URLs for API / Celery
 SITE_URL = os.environ.get('SITE_URL', 'https://clipdd.com').rstrip('/')
 
+# Maintenance mode — set MAINTENANCE_MODE=false in .env to open clip creation to all users
+MAINTENANCE_MODE = os.environ.get('MAINTENANCE_MODE', 'true').lower() == 'true'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
