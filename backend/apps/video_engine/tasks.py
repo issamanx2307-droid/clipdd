@@ -28,73 +28,111 @@ KLING_WEBHOOK_URL = 'https://clipdd.com/api/webhook/kling/'
 
 def generate_script_with_ai(product_name, key_points, tone, duration, include_person=True):
     """
-    Single GPT call that returns:
-    - TTS-ready full_text (will drive audio duration)
-    - scenes with per-scene timing estimates
-    - motion_prompt aligned to the script tone
-    - overlay data: hook_line, product_label, cta_line, hashtags
+    Single GPT-4.1 call that returns fully-synced script + overlay + motion_prompt.
+    Output drives: TTS voice, Kling video, Pillow overlay text.
     """
     scene_count = 4 if duration <= 15 else 6
     try:
         from openai import OpenAI
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-        tone_map = {
-            'urgency': 'เร่งด่วน FOMO สูง กดออเดอร์ทันที',
-            'review':  'รีวิวจริง น่าเชื่อถือ มืออาชีพ',
-            'drama':   'ดราม่า Before/After อารมณ์แรง',
-            'unbox':   'Unboxing แกะกล่อง ตื่นเต้น',
+        # ── Tone context ──────────────────────────────────────────────────────
+        tone_guide = {
+            'urgency': {
+                'desc':    'FOMO สูง เร่งด่วน ของมีจำนวนจำกัด กดออเดอร์เดี๋ยวนี้',
+                'hook_ex': ['หยุดก่อน! ราคานี้ไม่มีอีกแล้ว', 'อย่าเลื่อนผ่าน! เหลือน้อยมาก', f'ทำไมคนแห่ซื้อ {product_name}?'],
+                'vibe':    'fast-paced, high energy, vibrant warm colors, flash sale atmosphere',
+            },
+            'review': {
+                'desc':    'รีวิวจริง พูดจากประสบการณ์ น่าเชื่อถือ มีข้อมูล',
+                'hook_ex': ['ใช้มาแล้ว 3 เดือน บอกเลย', f'ทดสอบ {product_name} จริงๆ เลย', 'รีวิวตรงๆ ไม่มีโฆษณา'],
+                'vibe':    'clean, natural, soft lifestyle lighting, honest and calm atmosphere',
+            },
+            'drama': {
+                'desc':    'ดราม่า Before/After อารมณ์แรง เปลี่ยนชีวิต',
+                'hook_ex': ['ก่อนหน้านี้ฉันไม่รู้จะทำยังไง', f'ชีวิตเปลี่ยนเพราะ {product_name}', 'ไม่เชื่อก็ต้องเชื่อ'],
+                'vibe':    'dramatic high-contrast, cinematic close-ups, emotional storytelling lighting',
+            },
+            'unbox': {
+                'desc':    'แกะกล่อง ตื่นเต้น เซอร์ไพรส์ ครั้งแรก',
+                'hook_ex': ['มาดูกันว่าข้างในมีอะไร!', f'สั่ง {product_name} มาแล้ว เปิดดูด้วยกัน', 'จัดส่งมาถึงแล้ว!'],
+                'vibe':    'bright, exciting, dynamic unboxing energy, curiosity-building camera reveals',
+            },
         }
-        tone_desc = tone_map.get(tone, tone_map['urgency'])
+        tg = tone_guide.get(tone, tone_guide['urgency'])
 
-        person_instruction = (
-            "- motion_prompt ต้องมีคน: สาวไทยสวย กำลังถือหรือใช้สินค้า ท่าทางเป็นธรรมชาติ (influencer style)"
+        person_rule = (
+            "motion_prompt MUST feature a beautiful young Thai woman (influencer style) "
+            "naturally holding or using the product — she is the main subject, camera frames her + product together."
             if include_person else
-            "- motion_prompt เน้นสินค้าอย่างเดียว ไม่ต้องมีคน"
+            "motion_prompt: product-only, NO people at all — the product is the hero of every frame."
         )
 
-        prompt = f"""คุณคือผู้เชี่ยวชาญสร้างคลิปขายของ TikTok ภาษาไทย
+        target_tts_sec = round(duration * 0.75, 1)
+        target_scene_sec = round(duration * 0.65 / scene_count, 1)
+
+        system_msg = f"""คุณคือ AI Copywriter + Video Director ผู้เชี่ยวชาญด้านคลิปขายของ TikTok ไทยที่ปัง
+
+ระบบ ClipDD จะนำ output ของคุณไปสร้างคลิปอัตโนมัติดังนี้:
+  1. เสียงพากย์ไทย (TTS Botnoi): อ่าน hook → body → cta ต่อเนื่อง รวม ≈ {target_tts_sec} วินาที
+  2. วิดีโอ Kling AI: render จาก motion_prompt ที่คุณเขียน ขนาด 9:16 portrait
+  3. Overlay text บนหน้าจอ: hook_line บนสุด, product_label + cta_line ล่าง
+
+หลัก TikTok Hook ที่ดี (เลือกใช้รูปแบบที่เหมาะ):
+  • Pattern interrupt: "หยุดก่อน! / รู้ยัง? / อย่าเลื่อนผ่าน!"
+  • Bold claim: "ลองครั้งเดียวติดเลย / ราคานี้ไม่มีในตลาด"
+  • Curiosity gap: "ทำไมคนถึงสั่งซ้ำทุกเดือน?" / "ความลับที่ไม่ค่อยมีคนรู้"
+  • Social proof: "ขายไปแล้วกว่า 500 ออเดอร์ / รีวิว 5 ดาวเต็ม"
+
+กฎเหล็ก:
+  • hook ต้อง STOP THE SCROLL ใน 3 วินาทีแรก — ไม่ใช่แค่บอกชื่อสินค้า
+  • body พูดถึง ประโยชน์จริง / ปัญหาที่แก้ได้ — ไม่ใช่แค่คุณสมบัติ
+  • cta ต้องกระตุ้นให้ทำอะไรบางอย่างทันที (กด/สั่ง/ทัก/ดูเพิ่ม)
+  • เสียงพากย์ต้องฟังแล้วไหล เป็นธรรมชาติ ไม่ใช่อ่านสเปค
+  • motion_prompt ต้องเป็น English ละเอียด 80-150 คำ ระบุ: subject action, camera movement, lighting, color palette, atmosphere
+  • overlay.hook_line ≤ 15 ตัวอักษร ไม่มีอีโมจิ สร้าง curiosity หรือ urgency
+  • ทุก field ต้องสอดคล้องกัน — เสียงพูดอะไร ภาพแสดงสิ่งนั้น overlay ตอกย้ำสิ่งนั้น"""
+
+        user_msg = f"""สร้างสคริปต์คลิปขายของสำหรับ:
 
 สินค้า: {product_name}
-จุดเด่น: {key_points or 'ไม่ระบุ'}
-โทน: {tone_desc}
-ความยาวคลิป: {duration} วินาที
-จำนวน scene: {scene_count}
+จุดเด่น/ข้อมูลสินค้า: {key_points or '(ไม่ระบุ — ใช้ความรู้ทั่วไปเกี่ยวกับสินค้าประเภทนี้)'}
+โทนคลิป: {tg['desc']}
+ความยาว: {duration} วินาที | จำนวน scene: {scene_count}
 มีคนในคลิป: {'ใช่' if include_person else 'ไม่ใช่'}
 
-สร้างข้อมูลทั้งหมดนี้ในครั้งเดียว เพื่อให้เสียงพากย์ ภาพ และ overlay สอดคล้องกัน:
+ตัวอย่าง hook ที่เหมาะกับโทนนี้: {' / '.join(tg['hook_ex'])}
+Visual vibe: {tg['vibe']}
+{person_rule}
 
-ตอบเป็น JSON เท่านั้น:
+ตอบ JSON เท่านั้น (ไม่มีข้อความอื่น):
 {{
-  "hook":   "ประโยคเปิด 3-5 วินาที หยุดคนดูได้",
-  "body":   ["ประโยคกลาง 1", "ประโยคกลาง 2"],
-  "cta":    "ประโยคปิด กระตุ้นซื้อ",
-  "scenes": [
-    {{"text": "ข้อความแต่ละ scene", "sec": 2.5}}
-  ],
-  "motion_prompt": "English Kling prompt, {'include a beautiful Thai woman naturally holding/using the product, camera slowly zooms in on her face and the product, warm TikTok lifestyle lighting' if include_person else 'cinematic product-only reveal, smooth camera motion, no people'}",
+  "hook":   "<ประโยคเปิด — หยุดคนดูได้ใน 3 วินาที ฟังแล้วอยากรู้ต่อ>",
+  "body":   ["<ประโยคกลาง 1 — ประโยชน์จริง / แก้ปัญหา>", "<ประโยคกลาง 2 — เสริมความน่าสนใจ>"],
+  "cta":    "<ประโยคปิด — กระตุ้นซื้อ มีความเร่งด่วน>",
+  "scenes": [{{"text": "<ข้อความแต่ละ scene>", "sec": {target_scene_sec}}}],
+  "motion_prompt": "<English Kling v2 prompt, 80-150 words, very specific: subject, action, camera movement type, lighting quality, color palette, background style, atmosphere — {tg['vibe']}>",
   "overlay": {{
-    "hook_line":     "ข้อความ hook สั้นๆ บนหน้าจอ ไม่เกิน 20 ตัวอักษร เช่น หยุดก่อน!!",
-    "product_label": "ชื่อสินค้าสั้นๆ เช่น ครีมกันแดด SPF50",
-    "cta_line":      "ข้อความ CTA สั้นๆ เช่น กดตะกร้าด่วนเลย!",
-    "hashtags":      ["#TikTokขายของ", "#สินค้าขายดี"]
+    "hook_line":     "<≤15 ตัวอักษร ไม่มีอีโมจิ เช่น: หยุดก่อน! / ราคาพิเศษ! / ต้องลองแล้ว>",
+    "product_label": "<ชื่อสินค้าสั้นๆ ≤20 ตัวอักษร>",
+    "cta_line":      "<CTA สั้นๆ ≤20 ตัวอักษร เช่น: กดตะกร้าเลย! / สั่งด่วน! / ทักมาเลย>",
+    "hashtags":      ["#แฮชแท็กที่เกี่ยวข้อง", "#TikTokขายของ"]
   }},
-  "hashtags": ["#TikTokขายของ", "#ของดีบอกต่อ"]
+  "hashtags": ["#แฮชแท็กที่เกี่ยวข้อง", "#TikTokขายของ", "#ของดีบอกต่อ"]
 }}
 
-กฎสำคัญ:
-- scenes ต้องมีจำนวนเท่ากับ {scene_count} และ sum(sec) ≈ {duration * 0.7:.0f} วินาที (เหลือที่สำหรับ Ken Burns)
-{person_instruction}
-- overlay.hook_line ต้องสั้น กระชับ ดึงดูด ไม่มีอีโมจิ
-- ตอบ JSON เท่านั้น ไม่มีข้อความอื่น"""
+กฎ scenes: ต้องมีจำนวน {scene_count} scene, sum(sec) ≈ {duration * 0.65:.0f} วินาที"""
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
+            model="gpt-4.1",
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user",   "content": user_msg},
+            ],
             response_format={"type": "json_object"},
         )
         data = json.loads(response.choices[0].message.content)
-        logger.info(f"Script generated for {product_name}: hook={data.get('hook','')[:40]}")
+        logger.info(f"Script (gpt-4.1) generated for {product_name}: hook={data.get('hook','')[:60]}")
         return data
 
     except Exception as e:

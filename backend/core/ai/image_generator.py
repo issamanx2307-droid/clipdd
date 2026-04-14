@@ -220,7 +220,7 @@ def analyze_person_image_with_vision(image_path):
         mime = f"image/{'jpeg' if ext in ['jpg', 'jpeg'] else ext}"
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4.1",
             messages=[{
                 "role": "user",
                 "content": [
@@ -230,13 +230,14 @@ def analyze_person_image_with_vision(image_path):
                     },
                     {
                         "type": "text",
-                        "text": """Describe this person in 1-2 sentences for use in a video generation prompt.
-Focus on: gender, approximate age, appearance, clothing style, and any distinctive features.
-Write in English only. Be concise and specific. Example: 'a young Thai woman in her mid-20s with long black hair, wearing a casual white blouse, natural makeup, friendly smile'"""
+                        "text": """Describe this person precisely for use in a Kling v2 video generation prompt.
+Include: gender, approximate age, ethnicity, face features, hair (length/color/style), clothing (color/style/fabric), accessories, skin tone, overall vibe/energy.
+Write in English only. Be specific and visual — this description will be used to recreate this person realistically in AI video.
+Example: 'a Thai woman in her late 20s, long straight black hair, fair skin, wearing a fitted coral-pink crop top and high-waist jeans, natural makeup with glossy lips, confident and friendly expression, influencer aesthetic'"""
                     }
                 ]
             }],
-            max_tokens=100,
+            max_tokens=150,
         )
         description = response.choices[0].message.content.strip()
         logger.info(f"Person description: {description}")
@@ -273,28 +274,48 @@ def generate_motion_prompt_for_kling(product_name, key_points, tone, extra_requi
 
     extra_part = f"\nAdditional requirements: {extra_requirements}" if extra_requirements else ""
 
-    prompt_text = f"""Write a Kling v2 video generation prompt for a TikTok product commercial.
+    tone_camera = {
+        'urgency': 'fast dynamic push-in, slight handheld energy, quick rack focus on product',
+        'review':  'slow steady zoom in, deliberate and confident camera movement, close-up detail shots',
+        'drama':   'dramatic slow motion, sweeping cinematic pan, extreme close-up for impact',
+        'unbox':   'revealing camera tilt-up or pull-back, curious exploratory movement, POV-style',
+    }
+    tone_light = {
+        'urgency': 'vibrant warm-toned studio lighting, saturated colors, high contrast, commercial pop',
+        'review':  'soft natural daylight or ring light, clean neutral tones, product details sharp',
+        'drama':   'moody side lighting with warm accent, deep shadows, cinematic color grade',
+        'unbox':   'bright cheerful overexposed look, clean white or pastel background, joyful energy',
+    }
+    cam   = tone_camera.get(tone, tone_camera['urgency'])
+    light = tone_light.get(tone, tone_light['urgency'])
 
-Product: {product_name}
-Key features: {key_points or 'not specified'}
-Tone/Style: {tone_desc}
-{extra_part}
+    prompt_text = f"""You are an expert Kling v2 video prompt engineer specializing in TikTok product commercials.
 
-Requirements:
-- {person_part}
-- Camera: smooth cinematic motion (slow zoom in or gentle pan)
-- Lighting: bright, warm TikTok lifestyle lighting
-- Background: clean lifestyle or gradient background fitting the product
-- Quality: sharp, vibrant, 9:16 portrait format
-- No text in the video
+Write a Kling v2 motion prompt for this product video. Be highly specific and visual.
 
-Reply with ONLY the prompt in English, max 120 words, no explanation."""
+PRODUCT: {product_name}
+KEY FEATURES: {key_points or 'not specified'}
+TONE/STYLE: {tone_desc}
+SUBJECT: {person_part}
+CAMERA: {cam}
+LIGHTING: {light}{extra_part}
+
+REQUIREMENTS:
+- 9:16 portrait format (TikTok vertical)
+- No text, watermarks, or UI elements in the video
+- Photorealistic quality, cinematic look
+- Motion must feel intentional and smooth
+- Colors should be vivid and attention-grabbing
+- Background must complement the product (not distract)
+- Every detail matters: describe textures, reflections, depth of field if relevant
+
+Reply with ONLY the Kling prompt in English. 100-150 words. No explanation, no labels."""
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1",
             messages=[{"role": "user", "content": prompt_text}],
-            max_tokens=180,
+            max_tokens=220,
         )
         result = response.choices[0].message.content.strip()
         logger.info(f"Kling v2 motion prompt generated: {result[:80]}")
