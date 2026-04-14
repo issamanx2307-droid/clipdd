@@ -266,6 +266,88 @@
 }
 .clipBtn:hover { background:#FF7A00; color:#fff; border-color:#FF7A00 }
 
+/* ── DEALS ── */
+.dealsSection { max-width:1200px; margin:0 auto; padding:0 40px 48px }
+@media(max-width:768px) { .dealsSection { padding:0 20px 32px } }
+.dealsGrid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px }
+@media(max-width:1000px) { .dealsGrid { grid-template-columns:repeat(2,1fr) } }
+@media(max-width:500px) { .dealsGrid { grid-template-columns:1fr } }
+
+.dealCard {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,.05);
+  transition: transform .2s, box-shadow .2s;
+}
+.dealCard:hover { transform:translateY(-4px); box-shadow:0 8px 28px rgba(0,0,0,.10) }
+.dealThumb {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.8rem;
+}
+.dealBody { padding:14px }
+.dealBadge {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #FFF7ED;
+  color: #FF7A00;
+  margin-bottom: 8px;
+}
+.dealTitle { font-size:.9rem; font-weight:700; color:#1F2937; margin-bottom:6px; line-height:1.4 }
+.dealDesc { font-size:.78rem; color:#6B7280; line-height:1.5; margin-bottom:12px }
+.dealFooter { display:flex; align-items:center; justify-content:space-between }
+.dealPrice { font-size:1rem; font-weight:900; color:#FF7A00 }
+.dealBtn {
+  background: #FF7A00;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 700;
+  padding: 7px 16px;
+  border-radius: 10px;
+  transition: background .2s;
+}
+.dealBtn:hover { background:#e06a00 }
+
+/* ── ARTICLES ── */
+.articlesSection { max-width:1200px; margin:0 auto; padding:0 40px 48px }
+@media(max-width:768px) { .articlesSection { padding:0 20px 32px } }
+.articlesGrid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px }
+@media(max-width:900px) { .articlesGrid { grid-template-columns:repeat(2,1fr) } }
+@media(max-width:500px) { .articlesGrid { grid-template-columns:1fr } }
+
+.articleCard {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,.05);
+  transition: transform .2s, box-shadow .2s;
+}
+.articleCard:hover { transform:translateY(-4px); box-shadow:0 8px 28px rgba(0,0,0,.10) }
+.articleCover { height: 140px }
+.articleBody { padding:16px }
+.articleCat {
+  display: inline-block;
+  font-size: .7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+.articleTitle { font-size:.92rem; font-weight:700; color:#1F2937; line-height:1.45; margin-bottom:8px }
+.articleExcerpt { font-size:.78rem; color:#6B7280; line-height:1.55; margin-bottom:14px }
+.articleFooter { display:flex; align-items:center; justify-content:space-between }
+.articleRead { font-size:.72rem; color:#6B7280 }
+.articleBtn { font-size:.78rem; font-weight:700; color:#FF7A00; transition:opacity .2s }
+.articleBtn:hover { opacity:.7 }
+
 /* ── HOW IT WORKS ── */
 .howSection {
   background: #fff;

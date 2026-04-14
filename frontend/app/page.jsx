@@ -2,6 +2,19 @@
 import { useState, useRef, useEffect } from 'react'
 import styles from './page.module.css'
 
+const AFFILIATE_PRODUCTS = [
+  { id:1, emoji:'💡', title:'ไฟ Ring Light LED', desc:'แสงสวย เซลฟี่คลิปชัด ขายของออนไลน์ดูน่าเชื่อถือขึ้น', price:'฿299', badge:'ขายดี', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)' },
+  { id:2, emoji:'🎙️', title:'ไมโครโฟน Clip-on', desc:'เสียงพากย์ใสชัด ไม่มีเสียงรบกวน เหมาะกับ TikTok Live', price:'฿490', badge:'แนะนำ', bg:'linear-gradient(135deg,#F5F3FF,#DDD6FE)' },
+  { id:3, emoji:'📱', title:'ขาตั้งโทรศัพท์', desc:'ถ่ายคลิปคนเดียวได้ มุมกล้องปรับได้ 360 องศา', price:'฿199', badge:'ใหม่', bg:'linear-gradient(135deg,#F0F9FF,#BAE6FD)' },
+  { id:4, emoji:'🎬', title:'Green Screen ผ้าพื้นเขียว', desc:'เปลี่ยนแบ็คกราวนด์ได้ทุกแบบ ทำ effect ดูโปร', price:'฿350', badge:'ฮิต', bg:'linear-gradient(135deg,#F0FDF4,#BBF7D0)' },
+]
+
+const ARTICLES = [
+  { id:1, cat:'เทคนิค TikTok', bg:'linear-gradient(135deg,#FFF7ED,#FED7AA)', catColor:'#FF7A00', title:'10 วิธีเพิ่มยอดวิวคลิปสินค้าบน TikTok ให้ได้ล้านวิวใน 2025', excerpt:'เทคนิคที่ร้านค้าหลายร้านใช้จนยอดขายพุ่ง ปรับได้ทันที ไม่ต้องใช้ทักษะตัดต่อ', readTime:'5 นาที' },
+  { id:2, cat:'สคริปต์คลิป', bg:'linear-gradient(135deg,#F5F3FF,#DDD6FE)', catColor:'#7C3AED', title:'สูตรเขียนสคริปต์ขายของสไตล์ Viral — Hook 3 วินาทีแรกต้องทำให้หยุดเลื่อน', excerpt:'โครงสร้างสคริปต์ที่ AI ของเราใช้ พร้อมตัวอย่างคลิปขายดีจริงของลูกค้า', readTime:'7 นาที' },
+  { id:3, cat:'เพิ่มยอดขาย', bg:'linear-gradient(135deg,#F0FDF4,#BBF7D0)', catColor:'#059669', title:'เปรียบเทียบ: ร้านที่ใช้ AI สร้างคลิปกับร้านที่ถ่ายเองธรรมดา ต่างกันแค่ไหน?', excerpt:'เคสจริงจากร้านค้าใน ClipDD วิเคราะห์ยอดวิว engagement และ conversion', readTime:'6 นาที' },
+]
+
 const STATS = [
   { value: '1,000+', label: 'ร้านค้าใช้งาน' },
   { value: '50,000+', label: 'คลิปที่สร้างแล้ว' },
@@ -87,9 +100,11 @@ export default function Home() {
           Clip<span className={styles.logoAccent}>DD</span>
         </span>
         <div className={styles.navLinks}>
-          <a href="#clips"   className={styles.navLink}>ตัวอย่างคลิป</a>
-          <a href="#how"     className={styles.navLink}>วิธีใช้</a>
-          <a href="#pricing" className={styles.navLink}>ราคา</a>
+          <a href="#clips"    className={styles.navLink}>ตัวอย่างคลิป</a>
+          <a href="#deals"    className={styles.navLink}>ดีล</a>
+          <a href="#articles" className={styles.navLink}>บทความ</a>
+          <a href="#how"      className={styles.navLink}>วิธีใช้</a>
+          <a href="#pricing"  className={styles.navLink}>ราคา</a>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           <a href="/login"    className={styles.navLink}>เข้าสู่ระบบ</a>
@@ -207,6 +222,58 @@ export default function Home() {
         </div>
       </AnimSection>
 
+      {/* ── DEALS / AFFILIATE ── */}
+      <AnimSection>
+        <section className={styles.dealsSection} id="deals">
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>🛒 อุปกรณ์แนะนำสำหรับคลิปขายของ</h2>
+            <a href="/deals" className={styles.sectionMore}>ดูดีลทั้งหมด →</a>
+          </div>
+          <div className={styles.dealsGrid}>
+            {AFFILIATE_PRODUCTS.map(p => (
+              <div key={p.id} className={styles.dealCard}>
+                <div className={styles.dealThumb} style={{ background: p.bg }}>{p.emoji}</div>
+                <div className={styles.dealBody}>
+                  <span className={styles.dealBadge}>{p.badge}</span>
+                  <h3 className={styles.dealTitle}>{p.title}</h3>
+                  <p className={styles.dealDesc}>{p.desc}</p>
+                  <div className={styles.dealFooter}>
+                    <span className={styles.dealPrice}>{p.price}</span>
+                    <a href="/deals" className={styles.dealBtn}>ดูราคา</a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </AnimSection>
+
+      {/* ── ARTICLES ── */}
+      <AnimSection>
+        <section className={styles.articlesSection} id="articles">
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>📖 บทความน่าอ่าน</h2>
+            <a href="/articles" className={styles.sectionMore}>ดูทั้งหมด →</a>
+          </div>
+          <div className={styles.articlesGrid}>
+            {ARTICLES.map(a => (
+              <article key={a.id} className={styles.articleCard}>
+                <div className={styles.articleCover} style={{ background: a.bg }} />
+                <div className={styles.articleBody}>
+                  <span className={styles.articleCat} style={{ color: a.catColor, background: a.catColor + '18' }}>{a.cat}</span>
+                  <h3 className={styles.articleTitle}>{a.title}</h3>
+                  <p className={styles.articleExcerpt}>{a.excerpt}</p>
+                  <div className={styles.articleFooter}>
+                    <span className={styles.articleRead}>⏱ {a.readTime}</span>
+                    <a href="/articles" className={styles.articleBtn}>อ่านต่อ →</a>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </AnimSection>
+
       {/* ── HOW IT WORKS ── */}
       <AnimSection>
         <section className={styles.howSection} id="how">
@@ -262,10 +329,12 @@ export default function Home() {
             Clip<span className={styles.footerLogoAccent}>DD</span>
           </span>
           <div className={styles.footerLinks}>
-            <a href="#clips"   className={styles.footerLink}>ตัวอย่างคลิป</a>
-            <a href="#pricing" className={styles.footerLink}>ราคา</a>
-            <a href="/terms"   className={styles.footerLink}>ข้อกำหนด</a>
-            <a href="/privacy" className={styles.footerLink}>ความเป็นส่วนตัว</a>
+            <a href="#clips"    className={styles.footerLink}>ตัวอย่างคลิป</a>
+            <a href="/deals"    className={styles.footerLink}>ดีล</a>
+            <a href="/articles" className={styles.footerLink}>บทความ</a>
+            <a href="#pricing"  className={styles.footerLink}>ราคา</a>
+            <a href="/terms"    className={styles.footerLink}>ข้อกำหนด</a>
+            <a href="/privacy"  className={styles.footerLink}>ความเป็นส่วนตัว</a>
           </div>
           <p className={styles.footerCopy}>© 2025 ClipDD · สร้างคลิปขายของด้วย AI · All rights reserved</p>
         </div>
