@@ -270,11 +270,14 @@ def _generate_voice_botnoi(text, output_path, speaker='1'):
     if not botnoi_token:
         raise Exception('BOTNOI_API_KEY ไม่ได้ตั้งค่า — กรุณาเพิ่มใน .env แล้ว restart')
 
+    logger.info(f"Botnoi TTS: speaker={speaker} text_len={len(text)} token_prefix={botnoi_token[:8]}")
     resp = requests.post(
         'https://api-voice.botnoi.ai/openapi/v1/generate_audio',
         headers={
             'botnoi-token': botnoi_token,
             'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/json',
         },
         json={
             'text': text,
@@ -287,10 +290,10 @@ def _generate_voice_botnoi(text, output_path, speaker='1'):
         },
         timeout=60,
     )
+    logger.info(f"Botnoi TTS response: status={resp.status_code} body={resp.text[:300]}")
     if resp.status_code != 200:
         raise Exception(
             f'Botnoi TTS HTTP {resp.status_code} — '
-            f'token prefix: {botnoi_token[:8]}... | '
             f'body: {resp.text[:300]}'
         )
     resp.raise_for_status()
