@@ -45,6 +45,74 @@ function authHeaders() {
   return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Token ${token}` } : {}) }
 }
 
+// ── Voice Selector (8 Botnoi speakers + preview) ─────────
+const BOTNOI_VOICES = [
+  { value: '1', emoji: '👩', label: 'อรนภา', desc: 'หญิง · สดใส' },
+  { value: '2', emoji: '👩', label: 'นภสร',  desc: 'หญิง · นุ่มนวล' },
+  { value: '3', emoji: '👨', label: 'ธนกร',  desc: 'ชาย · หนักแน่น' },
+  { value: '4', emoji: '👨', label: 'ภูมิ',   desc: 'ชาย · ธรรมชาติ' },
+  { value: '5', emoji: '👩', label: 'มินตรา', desc: 'หญิง · อ่อนโยน' },
+  { value: '6', emoji: '👩', label: 'กัญญา',  desc: 'หญิง · สุภาพ' },
+  { value: '7', emoji: '👨', label: 'วรวิทย์', desc: 'ชาย · มั่นคง' },
+  { value: '8', emoji: '👨', label: 'สรวิชญ์', desc: 'ชาย · โฆษณา' },
+]
+
+function VoiceSelector({ voice, setVoice }) {
+  const [previewing, setPreviewing] = useState(null) // speaker id being loaded
+  const audioRef = useRef(null)
+
+  async function handlePreview(e, spk) {
+    e.stopPropagation()
+    if (previewing === spk) return
+    setPreviewing(spk)
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('cd_token') : null
+      const res = await fetch('/api/voice-preview/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Token ${token}` } : {}) },
+        body: JSON.stringify({ speaker: spk }),
+      })
+      const data = await res.json()
+      if (data.audio_url) {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
+        const audio = new Audio(data.audio_url)
+        audioRef.current = audio
+        audio.play()
+      }
+    } catch {}
+    finally { setPreviewing(null) }
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+      {BOTNOI_VOICES.map(v => (
+        <button key={v.value} type="button"
+          onClick={() => setVoice(v.value)}
+          style={{
+            background: voice === v.value ? 'rgba(229,62,62,.15)' : '#111827',
+            border: `1px solid ${voice === v.value ? '#E53E3E' : '#1e293b'}`,
+            borderRadius: 10, padding: '10px 8px 8px',
+            cursor: 'pointer', textAlign: 'center', position: 'relative',
+            transition: 'border-color .15s',
+          }}>
+          <div style={{ fontSize: '1.3rem', marginBottom: 2 }}>{v.emoji}</div>
+          <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#e2e8f0' }}>{v.label}</div>
+          <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: 6 }}>{v.desc}</div>
+          <div
+            onClick={e => handlePreview(e, v.value)}
+            style={{
+              fontSize: '0.7rem', padding: '3px 8px', borderRadius: 6,
+              background: previewing === v.value ? '#334155' : '#1e293b',
+              color: '#94a3b8', cursor: 'pointer', display: 'inline-block',
+            }}>
+            {previewing === v.value ? '⏳' : '▶ ลองเสียง'}
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ── Editable text field ──────────────────────────────────
 function EditableField({ label, value, onChange, hint, multiline, maxLen }) {
   const [editing, setEditing] = useState(false)
@@ -395,23 +463,8 @@ function CreateInner() {
               </div>
 
               <div className={styles.field}>
-                <label className={styles.label}>เสียงพากย์</label>
-                <div className={styles.voiceGrid}>
-                  {[
-                    { value: '1', emoji: '👩', label: 'อรนภา', desc: 'หญิง · สดใส · TikTok' },
-                    { value: '2', emoji: '👩', label: 'นภสร',  desc: 'หญิง · นุ่มนวล · พากย์' },
-                    { value: '3', emoji: '👨', label: 'ธนกร',  desc: 'ชาย · หนักแน่น · มั่นใจ' },
-                    { value: '4', emoji: '👨', label: 'ภูมิ',   desc: 'ชาย · เป็นธรรมชาติ' },
-                  ].map(v => (
-                    <button key={v.value} type="button"
-                      className={`${styles.voiceBtn} ${voice === v.value ? styles.voiceActive : ''}`}
-                      onClick={() => setVoice(v.value)}>
-                      <span className={styles.voiceEmoji}>{v.emoji}</span>
-                      <span className={styles.voiceName}>{v.label}</span>
-                      <span className={styles.voiceDesc}>{v.desc}</span>
-                    </button>
-                  ))}
-                </div>
+                <label className={styles.label}>เสียงพากย์ <span style={{fontWeight:400,color:'#64748b',fontSize:'0.78rem'}}>(กด ▶ ลองเสียง)</span></label>
+                <VoiceSelector voice={voice} setVoice={setVoice} />
               </div>
 
               <button type="submit" className={styles.submitBtn} disabled={credits === 0}>

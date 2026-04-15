@@ -971,68 +971,108 @@ function CreditAlerts({ token }) {
 // Maintenance Toggle
 // ──────────────────────────────────────────────
 function MaintenanceToggle({ token }) {
-  const [maintenance, setMaintenance] = useState(null)  // null = loading
+  const [info, setInfo] = useState(null)  // { maintenance, auto, reason, triggered_at }
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     fetch(`${API}/admin-api/maintenance/`, { headers: { 'X-Admin-Token': token } })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setMaintenance(d.maintenance) })
+      .then(d => { if (d) setInfo(d) })
       .catch(() => {})
   }, [token])
 
   async function toggle() {
-    if (maintenance === null || saving) return
+    if (info === null || saving) return
     setSaving(true)
     try {
       const res = await fetch(`${API}/admin-api/maintenance/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
-        body: JSON.stringify({ maintenance: !maintenance }),
+        body: JSON.stringify({ maintenance: !info.maintenance }),
       })
       const d = await res.json()
-      if (res.ok) setMaintenance(d.maintenance)
+      if (res.ok) setInfo(d)
     } catch {}
     finally { setSaving(false) }
   }
 
-  const isOn = maintenance === true
+  const isOn = info?.maintenance === true
+  const isAuto = info?.auto === true
 
   return (
-    <div style={{
-      background: isOn ? 'linear-gradient(135deg,#1a0a00,#2d1200)' : 'linear-gradient(135deg,#001a0a,#002d12)',
-      border: `1px solid ${isOn ? '#92400e' : '#065f46'}`,
-      borderRadius: 14, padding: '20px 24px', marginBottom: 24,
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
-    }}>
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <span style={{ fontSize: '1.4rem' }}>{isOn ? '🔧' : '✅'}</span>
-          <span style={{ fontWeight: 800, fontSize: '1rem', color: isOn ? '#fbbf24' : '#34d399' }}>
-            {maintenance === null ? 'กำลังโหลด...' : isOn ? 'ระบบปิดอยู่ (Maintenance)' : 'ระบบเปิดปกติ'}
-          </span>
+    <div style={{ marginBottom: 24 }}>
+      {/* Auto-trigger warning banner */}
+      {isAuto && (
+        <div style={{
+          background: 'linear-gradient(135deg,#3b0000,#1a0000)',
+          border: '1px solid #ef4444',
+          borderBottom: 'none',
+          borderRadius: '14px 14px 0 0',
+          padding: '14px 20px',
+          display: 'flex', alignItems: 'flex-start', gap: 12,
+        }}>
+          <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>🤖</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#f87171', marginBottom: 4 }}>
+              ระบบถูกหยุดอัตโนมัติ — Pipeline Error
+            </div>
+            {info.reason && (
+              <div style={{ fontSize: '0.82rem', color: '#fca5a5', marginBottom: 4, wordBreak: 'break-word' }}>
+                {info.reason}
+              </div>
+            )}
+            {info.triggered_at && (
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                เวลา: {info.triggered_at}
+              </div>
+            )}
+          </div>
         </div>
-        <p style={{ margin: 0, fontSize: '0.82rem', color: isOn ? '#d97706' : '#6ee7b7' }}>
-          {isOn
-            ? 'User ทั่วไปสร้างคลิปไม่ได้ — เฉพาะ Admin เท่านั้น'
-            : 'ทุกคนสร้างคลิปได้ตามปกติ'}
-        </p>
+      )}
+
+      {/* Main toggle card */}
+      <div style={{
+        background: isOn ? 'linear-gradient(135deg,#1a0a00,#2d1200)' : 'linear-gradient(135deg,#001a0a,#002d12)',
+        border: `1px solid ${isOn ? (isAuto ? '#ef4444' : '#92400e') : '#065f46'}`,
+        borderRadius: isAuto ? '0 0 14px 14px' : 14,
+        padding: '20px 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <span style={{ fontSize: '1.4rem' }}>{isOn ? '🔧' : '✅'}</span>
+            <span style={{ fontWeight: 800, fontSize: '1rem', color: isOn ? '#fbbf24' : '#34d399' }}>
+              {info === null ? 'กำลังโหลด...' : isOn ? 'ระบบปิดอยู่ (Maintenance)' : 'ระบบเปิดปกติ'}
+            </span>
+            {isAuto && (
+              <span style={{
+                background: '#7f1d1d', color: '#fca5a5', fontSize: '0.7rem',
+                fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+              }}>AUTO</span>
+            )}
+          </div>
+          <p style={{ margin: 0, fontSize: '0.82rem', color: isOn ? '#d97706' : '#6ee7b7' }}>
+            {isOn
+              ? 'User ทั่วไปสร้างคลิปไม่ได้ — เฉพาะ Admin เท่านั้น'
+              : 'ทุกคนสร้างคลิปได้ตามปกติ'}
+          </p>
+        </div>
+        <button
+          onClick={toggle}
+          disabled={info === null || saving}
+          style={{
+            background: isOn ? '#E53E3E' : '#059669',
+            color: '#fff', border: 'none', borderRadius: 999,
+            padding: '10px 28px', fontWeight: 800, fontSize: '0.9rem',
+            cursor: info === null || saving ? 'not-allowed' : 'pointer',
+            opacity: info === null || saving ? 0.6 : 1,
+            transition: 'background .2s',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {saving ? '⏳ กำลังบันทึก...' : isOn ? '🟢 เปิดระบบ' : '🔴 ปิดระบบ'}
+        </button>
       </div>
-      <button
-        onClick={toggle}
-        disabled={maintenance === null || saving}
-        style={{
-          background: isOn ? '#E53E3E' : '#059669',
-          color: '#fff', border: 'none', borderRadius: 999,
-          padding: '10px 28px', fontWeight: 800, fontSize: '0.9rem',
-          cursor: maintenance === null || saving ? 'not-allowed' : 'pointer',
-          opacity: maintenance === null || saving ? 0.6 : 1,
-          transition: 'background .2s',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {saving ? '⏳ กำลังบันทึก...' : isOn ? '🟢 เปิดระบบ' : '🔴 ปิดระบบ'}
-      </button>
     </div>
   )
 }

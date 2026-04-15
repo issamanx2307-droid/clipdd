@@ -535,6 +535,12 @@ def generate_script_task(self, project_id):
         project.status = 'failed'
         project.save(update_fields=['status'])
         logger.error(f'Script generation failed for project {project_id}: {exc}')
+        if self.request.retries >= self.max_retries:
+            try:
+                from apps.support.views import _auto_trigger_maintenance
+                _auto_trigger_maintenance(f'Script generation failed (project #{project_id}): {exc}')
+            except Exception:
+                pass
         raise self.retry(exc=exc, countdown=15)
 
 
@@ -693,6 +699,12 @@ def generate_video_task(self, project_id):
         project.status = 'failed'
         project.save(update_fields=['status'])
         logger.error(f'Video Phase 1 failed for project {project_id}: {exc}')
+        if self.request.retries >= self.max_retries:
+            try:
+                from apps.support.views import _auto_trigger_maintenance
+                _auto_trigger_maintenance(f'Video generation failed (project #{project_id}): {exc}')
+            except Exception:
+                pass
         raise self.retry(exc=exc, countdown=30)
 
 
@@ -834,6 +846,12 @@ def assemble_video_task(self, project_id, kling_video_url):
         project.status = 'failed'
         project.save(update_fields=['status'])
         logger.error(f'Video Phase 2 (assemble) failed for project {project_id}: {exc}')
+        if self.request.retries >= self.max_retries:
+            try:
+                from apps.support.views import _auto_trigger_maintenance
+                _auto_trigger_maintenance(f'Video assembly failed (project #{project_id}): {exc}')
+            except Exception:
+                pass
         raise self.retry(exc=exc, countdown=30)
 
 

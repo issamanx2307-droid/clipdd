@@ -1002,6 +1002,23 @@ def _get_maintenance_mode():
     return settings.MAINTENANCE_MODE
 
 
+def _auto_trigger_maintenance(reason: str):
+    """
+    Called by Celery tasks when a critical pipeline failure occurs after max retries.
+    Enables maintenance mode automatically and records the reason so admin can see it.
+    """
+    obj, _ = SiteContent.objects.get_or_create(key='system_settings', defaults={'content': {}})
+    obj.content = {
+        **obj.content,
+        'maintenance': True,
+        'maintenance_reason': str(reason)[:300],
+        'maintenance_auto': True,
+        'maintenance_triggered_at': timezone.now().strftime('%d/%m/%Y %H:%M'),
+    }
+    obj.save()
+    logger.error(f'[AUTO-MAINTENANCE] ระบบถูกหยุดอัตโนมัติ: {reason[:120]}')
+
+
 class SystemStatusView(APIView):
     """Public — returns current system maintenance status."""
     permission_classes = [permissions.AllowAny]
@@ -1017,7 +1034,14 @@ class AdminMaintenanceView(APIView):
     def get(self, request):
         if not check_admin(request):
             return Response({'detail': 'Unauthorized'}, status=403)
-        return Response({'maintenance': _get_maintenance_mode()})
+        obj = SiteContent.objects.filter(key='system_settings').first()
+        content = obj.content if obj else {}
+        return Response({
+            'maintenance': _get_maintenance_mode(),
+            'auto': bool(content.get('maintenance_auto', False)),
+            'reason': content.get('maintenance_reason', ''),
+            'triggered_at': content.get('maintenance_triggered_at', ''),
+        })
 
     def post(self, request):
         if not check_admin(request):
@@ -1026,6 +1050,13 @@ class AdminMaintenanceView(APIView):
         obj, _ = SiteContent.objects.get_or_create(
             key='system_settings', defaults={'content': {}}
         )
-        obj.content = {**obj.content, 'maintenance': value}
+        # Admin manually toggling → clear auto fields
+        obj.content = {
+            **obj.content,
+            'maintenance': value,
+            'maintenance_auto': False,
+            'maintenance_reason': '',
+            'maintenance_triggered_at': '',
+        }
         obj.save()
-        return Response({'maintenance': value})
+        return Response({'maintenance': value, 'auto': False})
