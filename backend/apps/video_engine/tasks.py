@@ -287,10 +287,11 @@ def _generate_voice_botnoi(text, output_path, speaker='1'):
         },
         timeout=60,
     )
-    if resp.status_code == 404:
+    if resp.status_code != 200:
         raise Exception(
-            f'Botnoi TTS 404 — ตรวจสอบ BOTNOI_API_KEY ใน .env '
-            f'(token prefix: {botnoi_token[:8]}...)'
+            f'Botnoi TTS HTTP {resp.status_code} — '
+            f'token prefix: {botnoi_token[:8]}... | '
+            f'body: {resp.text[:300]}'
         )
     resp.raise_for_status()
     data = resp.json()
