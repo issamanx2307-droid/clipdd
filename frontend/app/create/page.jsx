@@ -461,7 +461,16 @@ function CreateInner() {
       <nav className={styles.nav}>
         <a href="/" className={styles.logo}>Clip<span>DD</span></a>
         <div style={{display:'flex',alignItems:'center',gap:16}}>
-          {credits !== null && <span className={styles.credits}>🎬 เครดิต: {credits} คลิป</span>}
+          {credits !== null && (
+            <a href="/profile" className={styles.credits} style={{ textDecoration: 'none' }}>
+              🎬 เครดิต: {credits} คลิป
+            </a>
+          )}
+          <a href="/profile" style={{
+            color: '#94a3b8', fontSize: '0.82rem', textDecoration: 'none',
+            padding: '6px 14px', border: '1px solid rgba(255,255,255,.12)',
+            borderRadius: 999, transition: 'color .2s',
+          }}>👤 โปรไฟล์</a>
           <button className={styles.logoutBtn}
             onClick={() => { localStorage.removeItem('cd_token'); localStorage.removeItem('cd_user'); window.location.href = '/' }}>
             ออกจากระบบ
