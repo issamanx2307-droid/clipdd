@@ -582,6 +582,54 @@ def download_file(url, output_path):
 # ─────────────────────────────────────────────
 
 @shared_task(bind=True, max_retries=2, queue='video')
+def _preflight_kling_check(motion_prompt, audio_path, audio_duration,
+                           product_img_name, media_dir):
+    """
+    ตรวจสอบว่าทุกอย่างพร้อมก่อน submit ไป fal.ai / Kling
+    ถ้า fail ให้ raise Exception ทันที — Kling จะไม่ถูกเรียกและไม่เสียเครดิต fal.ai
+    """
+    errors = []
+
+    # 1. FAL_KEY ต้องตั้งค่า
+    fal_key = getattr(settings, 'FAL_KEY', '').strip()
+    if not fal_key:
+        errors.append('FAL_KEY ไม่ได้ตั้งค่าใน .env')
+
+    # 2. motion prompt ต้องไม่ว่าง
+    if not motion_prompt or len(motion_prompt.strip()) < 10:
+        errors.append(f'motion_prompt สั้นเกินไป ({len(motion_prompt or "")} chars) — GPT อาจมีปัญหา')
+
+    # 3. audio file ต้องมีอยู่และไม่ว่างเปล่า
+    if not os.path.exists(audio_path):
+        errors.append(f'audio file ไม่มีอยู่: {audio_path}')
+    else:
+        audio_size = os.path.getsize(audio_path)
+        if audio_size == 0:
+            errors.append(f'audio file ว่างเปล่า (0 bytes): {audio_path}')
+
+    # 4. audio duration ต้องสมเหตุสมผล
+    if audio_duration < 2.0:
+        errors.append(f'audio duration สั้นผิดปกติ ({audio_duration:.2f}s) — TTS อาจล้มเหลว')
+
+    # 5. product image ต้องมีอยู่จริงบน disk (ถ้าใช้ image-to-video)
+    if product_img_name:
+        img_path = os.path.join(str(media_dir), product_img_name)
+        if not os.path.exists(img_path):
+            errors.append(f'product image ไม่มีอยู่บน disk: {img_path}')
+        elif os.path.getsize(img_path) == 0:
+            errors.append(f'product image ว่างเปล่า: {img_path}')
+
+    if errors:
+        raise Exception('Pre-flight check failed — ยกเลิก Kling submit เพื่อประหยัดเครดิต:\n' +
+                        '\n'.join(f'  • {e}' for e in errors))
+
+    logger.info(
+        f'Pre-flight OK — audio={audio_duration:.1f}s '
+        f'prompt_len={len(motion_prompt)} '
+        f'img={"yes" if product_img_name else "no"}'
+    )
+
+
 def generate_script_task(self, project_id):
     """
     GPT generates script + overlay data → saves to RenderJob.script_data
@@ -742,8 +790,17 @@ def generate_video_task(self, project_id):
         render_job.progress = 38
         render_job.save()
 
-        # ── 5. Submit Kling v2 ASYNC ──────────────────────────
+        # ── 4.5 Pre-flight check ──────────────────────────────
         product_img = project.uploaded_images.filter(image_type='product').first()
+        _preflight_kling_check(
+            motion_prompt=motion_prompt,
+            audio_path=audio_path,
+            audio_duration=audio_duration,
+            product_img_name=product_img.image.name if product_img else None,
+            media_dir=media_dir,
+        )
+
+        # ── 5. Submit Kling v2 ASYNC ──────────────────────────
         kling_mode = 'image-to-video' if product_img else 'text-to-video'
 
         if product_img:
