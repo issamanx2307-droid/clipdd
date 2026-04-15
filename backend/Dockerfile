@@ -1,6 +1,15 @@
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y ffmpeg fonts-thai-tlwg && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ffmpeg fonts-thai-tlwg wget fontconfig && \
+    mkdir -p /usr/share/fonts/truetype/google-thai && \
+    wget -q "https://github.com/google/fonts/raw/main/ofl/kanit/Kanit-Bold.ttf" \
+         -O /usr/share/fonts/truetype/google-thai/Kanit-Bold.ttf && \
+    wget -q "https://github.com/google/fonts/raw/main/ofl/prompt/Prompt-SemiBold.ttf" \
+         -O /usr/share/fonts/truetype/google-thai/Prompt-SemiBold.ttf && \
+    wget -q "https://github.com/google/fonts/raw/main/ofl/sarabun/Sarabun-Bold.ttf" \
+         -O /usr/share/fonts/truetype/google-thai/Sarabun-Bold.ttf && \
+    fc-cache -fv && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

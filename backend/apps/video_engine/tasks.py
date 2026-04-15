@@ -1,4 +1,5 @@
 import os
+import random
 import json
 import logging
 import subprocess
@@ -12,11 +13,110 @@ from .utils import normalize_script_data, _template_script, absolute_media_url
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────
-# FONT PATHS (Thai fonts available in container)
+# FONT PATHS
 # ─────────────────────────────────────────────
-FONT_BOLD   = '/usr/share/fonts/truetype/tlwg/Loma-Bold.ttf'
+FONT_BOLD   = '/usr/share/fonts/truetype/tlwg/Loma-Bold.ttf'    # fallback
 FONT_NORMAL = '/usr/share/fonts/truetype/tlwg/Loma.ttf'
 FONT_TITLE  = '/usr/share/fonts/truetype/tlwg/Umpush-Bold.ttf'
+
+FONT_KANIT   = '/usr/share/fonts/truetype/google-thai/Kanit-Bold.ttf'
+FONT_PROMPT  = '/usr/share/fonts/truetype/google-thai/Prompt-SemiBold.ttf'
+FONT_SARABUN = '/usr/share/fonts/truetype/google-thai/Sarabun-Bold.ttf'
+TIKTOK_FONTS = [FONT_KANIT, FONT_PROMPT, FONT_SARABUN]
+
+# ─────────────────────────────────────────────
+# SUBTITLE THEME COLORS (per tone)
+# ─────────────────────────────────────────────
+TONE_SUBTITLE = {
+    'urgency': {'box': 'red@0.55',       'text': 'white'},
+    'review':  {'box': '0x15803d@0.60',  'text': 'white'},
+    'drama':   {'box': '0x6d28d9@0.60',  'text': 'white'},
+    'unbox':   {'box': '0xd97706@0.60',  'text': 'white'},
+}
+DEFAULT_SUBTITLE = {'box': '0x1e293b@0.70', 'text': 'white'}
+
+
+def pick_font():
+    """Return a random TikTok font, fall back to Loma if not installed."""
+    for f in random.sample(TIKTOK_FONTS, len(TIKTOK_FONTS)):
+        if os.path.exists(f):
+            return f
+    return FONT_BOLD
+
+
+def split_to_lines(text: str, max_chars: int = 14) -> list[str]:
+    """
+    Split Thai text into lines ≤ max_chars each.
+    Prefers breaking at spaces; falls back to hard split.
+    """
+    text = text.strip()
+    if len(text) <= max_chars:
+        return [text]
+    lines = []
+    while text:
+        if len(text) <= max_chars:
+            lines.append(text)
+            break
+        chunk = text[:max_chars]
+        space = chunk.rfind(' ')
+        if space > max_chars // 3:
+            lines.append(text[:space])
+            text = text[space + 1:]
+        else:
+            lines.append(chunk)
+            text = text[max_chars:]
+    return lines[:3]   # cap at 3 lines max
+
+
+def build_subtitle_filters(scenes: list, font_path: str, tone: str) -> list[str]:
+    """
+    Build one or more FFmpeg drawtext filters per scene with word-wrap + tone colors.
+    Returns a list of filter strings ready to chain with commas.
+    """
+    theme = TONE_SUBTITLE.get(tone, DEFAULT_SUBTITLE)
+    box_color  = theme['box']
+    text_color = theme['text']
+    line_h     = 56   # px between wrapped lines (fontsize 48 + 8px gap)
+
+    filters = []
+    t = 0.0
+    for scene in scenes:
+        raw_text = scene.get('text', '').strip()
+        dur      = float(scene.get('sec', 2.5))
+        end      = t + dur
+        lines    = split_to_lines(raw_text, max_chars=14)
+        total_h  = len(lines) * line_h
+        # Anchor center of text block at 78% down the frame
+        base_y   = f"(h*0.78 - {total_h // 2})"
+
+        for i, line in enumerate(lines):
+            safe = (line.replace('\\', '\\\\')
+                       .replace("'",  '\u2019')
+                       .replace(':',  '\\:'))
+            y_expr = base_y if i == 0 else f"({base_y} + {i * line_h})"
+            filters.append(
+                f"drawtext=fontfile='{font_path}'"
+                f":text='{safe}'"
+                f":fontcolor={text_color}:fontsize=48"
+                f":x=(w-tw)/2:y={y_expr}"
+                f":enable='between(t,{t:.2f},{end:.2f})'"
+                f":borderw=2:bordercolor=black@0.85"
+                f":box=1:boxcolor={box_color}:boxborderw=14"
+            )
+        t = end
+    return filters
+
+
+def clamp_audio(src: str, max_sec: float, dst: str) -> str:
+    """
+    Trim audio to max_sec if longer. Returns dst path.
+    Uses stream copy — instant, no re-encode.
+    """
+    subprocess.run(
+        ['ffmpeg', '-y', '-i', src, '-t', str(max_sec), '-c:a', 'copy', dst],
+        capture_output=True,
+    )
+    return dst
 
 # Webhook URL that fal.ai will POST to when Kling finishes
 KLING_WEBHOOK_URL = 'https://clipdd.com/api/webhook/kling/'
@@ -330,15 +430,23 @@ def ken_burns_segment(image_path, duration, output_path, zoom_direction='in'):
 
 def render_final_video(kling_path, kb_path, overlay_png,
                        audio_path, output_path, scenes,
-                       kling_duration, kb_duration, audio_duration):
+                       kling_duration, kb_duration, audio_duration,
+                       tone='urgency', font_path=None):
     """
     Pipeline:
     1. Concat Kling + Ken Burns → raw video
-    2. Overlay PNG (Pillow-rendered, Thai-safe) on every frame
-    3. Add audio (drives final length via -shortest)
-    4. Burn subtitles via drawtext (timestamps from scenes)
+    2. Overlay PNG on every frame
+    3. Burn subtitles (word-wrapped, tone-colored, random font)
+    4. Add clamped audio (finishes 1.5s before video end)
     """
-    font_path = FONT_BOLD
+    if font_path is None:
+        font_path = pick_font()
+
+    # Clamp audio: finish 1.5s before end of video
+    total_video = kling_duration + kb_duration
+    max_audio   = max(total_video - 1.5, total_video * 0.80)
+    clamped_audio = audio_path + '.clamped.mp3'
+    clamp_audio(audio_path, min(audio_duration, max_audio), clamped_audio)
 
     # ── 1. Concat ────────────────────────────────────────────
     concat_file = output_path + '.concat.txt'
@@ -356,25 +464,8 @@ def render_final_video(kling_path, kb_path, overlay_png,
         logger.error(f"Concat error: {r1.stderr.decode()[-300:]}")
         return False
 
-    # ── 2. Overlay PNG + Subtitles + Audio ───────────────────
-    sub_parts = []
-    t = 0.0
-    for scene in scenes:
-        text = scene.get('text', '')
-        dur  = float(scene.get('sec', 2.5))
-        end  = t + dur
-        safe = text.replace("'", "\u2019").replace(":", "\\:").replace("\\", "\\\\")
-        sub_parts.append(
-            f"drawtext=fontfile='{font_path}'"
-            f":text='{safe}'"
-            f":fontcolor=white:fontsize=52"
-            f":x=(w-tw)/2:y=h*0.55"
-            f":enable='between(t,{t:.2f},{end:.2f})'"
-            f":borderw=3:bordercolor=black@0.9"
-            f":box=1:boxcolor=black@0.40:boxborderw=10"
-        )
-        t = end
-
+    # ── 2. Overlay + Subtitles + Audio ───────────────────────
+    sub_parts = build_subtitle_filters(scenes, font_path, tone)
     overlay_filter = (
         f"[0:v][1:v]overlay=0:0[ov];"
         f"[ov]{','.join(sub_parts)}[vout]"
@@ -384,7 +475,7 @@ def render_final_video(kling_path, kb_path, overlay_png,
         'ffmpeg', '-y',
         '-i', concat_tmp,
         '-i', overlay_png,
-        '-i', audio_path,
+        '-i', clamped_audio,
         '-filter_complex', overlay_filter,
         '-map', '[vout]',
         '-map', '2:a',
@@ -399,7 +490,7 @@ def render_final_video(kling_path, kb_path, overlay_png,
         logger.error(f"Final render error: {r2.stderr.decode()[-500:]}")
         return False
 
-    for f in [concat_file, concat_tmp]:
+    for f in [concat_file, concat_tmp, clamped_audio]:
         try: os.remove(f)
         except: pass
     try: os.remove(overlay_png)
@@ -413,31 +504,21 @@ def render_final_video(kling_path, kb_path, overlay_png,
 # Used when no product image was uploaded
 # ─────────────────────────────────────────────
 
-def render_kling_only(kling_path, overlay_png, audio_path, output_path, scenes):
+def render_kling_only(kling_path, overlay_png, audio_path, output_path, scenes,
+                      tone='urgency', font_path=None, video_duration=10.0):
     """
     Simplified render: Kling video + overlay PNG + subtitles + audio.
     No Ken Burns concat — just Kling video with overlay and audio.
     """
-    font_path = FONT_BOLD
+    if font_path is None:
+        font_path = pick_font()
 
-    sub_parts = []
-    t = 0.0
-    for scene in scenes:
-        text = scene.get('text', '')
-        dur  = float(scene.get('sec', 2.5))
-        end  = t + dur
-        safe = text.replace("'", "\u2019").replace(":", "\\:").replace("\\", "\\\\")
-        sub_parts.append(
-            f"drawtext=fontfile='{font_path}'"
-            f":text='{safe}'"
-            f":fontcolor=white:fontsize=52"
-            f":x=(w-tw)/2:y=h*0.55"
-            f":enable='between(t,{t:.2f},{end:.2f})'"
-            f":borderw=3:bordercolor=black@0.9"
-            f":box=1:boxcolor=black@0.40:boxborderw=10"
-        )
-        t = end
+    # Clamp audio: finish 1.5s before end of video
+    max_audio = max(video_duration - 1.5, video_duration * 0.80)
+    clamped_audio = audio_path + '.clamped.mp3'
+    clamp_audio(audio_path, max_audio, clamped_audio)
 
+    sub_parts = build_subtitle_filters(scenes, font_path, tone)
     overlay_filter = (
         f"[0:v][1:v]overlay=0:0[ov];"
         f"[ov]{','.join(sub_parts)}[vout]"
@@ -448,7 +529,7 @@ def render_kling_only(kling_path, overlay_png, audio_path, output_path, scenes):
         '-stream_loop', '-1',
         '-i', kling_path,
         '-i', overlay_png,
-        '-i', audio_path,
+        '-i', clamped_audio,
         '-filter_complex', overlay_filter,
         '-map', '[vout]',
         '-map', '2:a',
@@ -463,10 +544,11 @@ def render_kling_only(kling_path, overlay_png, audio_path, output_path, scenes):
         logger.error(f"Kling-only render error: {result.stderr.decode()[-500:]}")
         return False
 
-    try:
-        os.remove(overlay_png)
-    except Exception:
-        pass
+    for f in [clamped_audio]:
+        try: os.remove(f)
+        except: pass
+    try: os.remove(overlay_png)
+    except: pass
     return True
 
 
@@ -797,6 +879,8 @@ def assemble_video_task(self, project_id, kling_video_url):
         render_job.save()
 
         # ── 4. Final FFmpeg render ────────────────────────────
+        chosen_font = pick_font()
+        logger.info(f"[Render] font={chosen_font.split('/')[-1]} tone={project.tone}")
         if has_kenburns:
             success = render_final_video(
                 kling_path    = kling1_path,
@@ -808,14 +892,19 @@ def assemble_video_task(self, project_id, kling_video_url):
                 kling_duration= kling_dur,
                 kb_duration   = kb_dur,
                 audio_duration= audio_duration,
+                tone          = project.tone or 'urgency',
+                font_path     = chosen_font,
             )
         else:
             success = render_kling_only(
-                kling_path  = kling1_path,
-                overlay_png = overlay_png,
-                audio_path  = audio_path,
-                output_path = final_path,
-                scenes      = scenes,
+                kling_path     = kling1_path,
+                overlay_png    = overlay_png,
+                audio_path     = audio_path,
+                output_path    = final_path,
+                scenes         = scenes,
+                tone           = project.tone or 'urgency',
+                font_path      = chosen_font,
+                video_duration = float(kling_dur),
             )
         if not success:
             raise Exception('FFmpeg final render failed')
