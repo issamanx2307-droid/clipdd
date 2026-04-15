@@ -4,7 +4,7 @@
 
 ---
 
-## สถานะระบบปัจจุบัน (อัปเดต: 2026-04-14)
+## สถานะระบบปัจจุบัน (อัปเดต: 2026-04-15)
 
 ระบบอยู่ระหว่างการพัฒนา — **ยังไม่เปิดให้ผู้ใช้ทั่วไปสร้างคลิปได้**  
 Admin user สำหรับทดสอบ: `issamanx2307@gmail.com` (is_staff=True, credits=9999)
@@ -48,6 +48,19 @@ assemble_video_task Phase 2  →  Download Kling + Ken Burns + Pillow overlay + 
 
 - [x] Dark theme ทั้งเว็บ (#09090f, #E53E3E)
 - [x] Clip thumbnails system (อัปโหลด/ลบจาก admin, แสดงบนหน้าแรก)
+- [x] ระบบเติมเครดิต — โอนเงิน + แนบสลิป + admin อนุมัติ (2026-04-15)
+  - `CreditOrder` model (billing app), migration 0003
+  - API: `POST/GET /api/orders/`, `GET /api/payment-settings/`
+  - Admin API: `GET/POST /api/admin-api/orders/`, `POST /api/admin-api/orders/<pk>/`, `GET/POST /api/admin-api/payment-settings/`
+  - `/topup` page — เลือก package, ดูเลขบัญชี/QR, อัปโหลดสลิป, ดูประวัติ
+  - Mantapa tab "💸 เติมเครดิต" — ตรวจสลิป อนุมัติ/ปฏิเสธ, ตั้งค่าช่องทางชำระเงิน + QR
+  - Landing page PLANS → 1 เครดิต 89฿ / 5 เครดิต 399฿
+- [x] เสียงพากย์ Botnoi TTS — แก้ ensure_ascii=False (Thai text encoding)
+- [x] Voice preview popup ใน create page (8 เสียง)
+- [x] Funny clip popup ระหว่างรอสร้างคลิป
+- [x] Subtitle word-wrap + tone-based box color + random font (Kanit/Prompt/Sarabun)
+- [x] Audio clamp — ตัดเสียงให้จบก่อนคลิป 1.5s
+- [x] Maintenance mode — toggle จาก Admin panel (DB-driven, instant)
 - [x] คำบรรยาย (caption) ใต้คลิปในหน้า admin + gallery
 - [x] หน้า /clips gallery (hero, grid, caption, hover-to-play)
 - [x] หน้า /clips/[id] (video player + share link button)
@@ -236,9 +249,10 @@ repo/
 │   ├── page.jsx              ← Landing page (dark theme, clip thumbnails)
 │   ├── page.module.css       ← CSS สำหรับ landing
 │   ├── create/page.jsx       ← หน้าสร้างคลิป (form → script → video → done)
+│   ├── topup/page.jsx        ← หน้าเติมเครดิต (เลือก package, สลิป, ประวัติ)
 │   ├── clips/page.jsx        ← Gallery คลิปขำๆ
 │   ├── clips/[id]/page.jsx   ← Individual clip viewer + share button
-│   └── mantapa/page.jsx      ← Admin panel
+│   └── mantapa/page.jsx      ← Admin panel (tab: dashboard, chats, orders, credits, demos, site)
 │
 ├── backend/
 │   ├── config/settings.py    ← Django settings (MAINTENANCE_MODE, SITE_URL, ฯลฯ)
@@ -253,10 +267,15 @@ repo/
 │   ├── apps/users/
 │   │   ├── models.py         ← User (email, credits, plan, is_staff)
 │   │   └── serializers.py    ← UserSerializer (รวม is_staff)
+│   ├── apps/billing/
+│   │   ├── models.py         ← Subscription, UsageLog, CreditOrder (CREDIT_PACKAGES dict)
+│   │   ├── views.py          ← BillingStatusView, CreditOrderView, PublicPaymentSettingsView
+│   │   └── urls.py           ← /api/orders/, /api/payment-settings/
 │   └── apps/support/
-│       ├── views.py          ← SystemStatusView, ClipThumbnailView, SiteContentView, ฯลฯ
-│       ├── urls.py
-│       └── models.py         ← ClipThumbnail, SiteContent, ChatSession, ChatMessage
+│       ├── views.py          ← SystemStatusView, ClipThumbnailView, SiteContentView,
+│       │                        AdminOrderListView, AdminOrderActionView, AdminPaymentSettingsView
+│       ├── urls.py           ← admin-api/orders/, admin-api/orders/<pk>/, admin-api/payment-settings/
+│       └── models.py         ← ClipThumbnail, SiteContent (key=payment_settings), ChatSession, ChatMessage
 │
 ├── .env.example              ← Template env vars (รวม MAINTENANCE_MODE)
 ├── docker-compose.yml

@@ -882,6 +882,247 @@ function ListEditor({ content, saving, onSave, onReset, fields, newItem }) {
 }
 
 // ──────────────────────────────────────────────
+// Payment Orders Section
+// ──────────────────────────────────────────────
+function PaymentOrdersSection({ token }) {
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('pending')
+  const [acting, setActing] = useState(null)
+  const [note, setNote] = useState('')
+  const [msg, setMsg] = useState(null)
+
+  const [paySettings, setPaySettings] = useState(null)
+  const [savingPay, setSavingPay] = useState(false)
+  const [payMsg, setPayMsg] = useState(null)
+  const [bankName, setBankName] = useState('')
+  const [account, setAccount] = useState('')
+  const [accountName, setAccountName] = useState('')
+  const qrRef = useRef(null)
+
+  const loadOrders = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API}/admin-api/orders/?status=${filter}`, {
+        headers: { 'X-Admin-Token': token },
+      })
+      if (res.ok) setOrders(await res.json())
+    } catch {}
+    finally { setLoading(false) }
+  }, [token, filter])
+
+  const loadPaySettings = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/admin-api/payment-settings/`, {
+        headers: { 'X-Admin-Token': token },
+      })
+      if (res.ok) {
+        const d = await res.json()
+        setPaySettings(d)
+        setBankName(d.bank_name || '')
+        setAccount(d.account || '')
+        setAccountName(d.account_name || '')
+      }
+    } catch {}
+  }, [token])
+
+  useEffect(() => { loadOrders() }, [loadOrders])
+  useEffect(() => { loadPaySettings() }, [loadPaySettings])
+
+  async function doAction(orderId, action) {
+    setActing(orderId); setMsg(null)
+    try {
+      const res = await fetch(`${API}/admin-api/orders/${orderId}/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ action, note }),
+      })
+      const d = await res.json()
+      if (res.ok) {
+        setMsg({ ok: true, text: d.detail })
+        setNote('')
+        loadOrders()
+      } else {
+        setMsg({ ok: false, text: d.detail })
+      }
+    } catch {
+      setMsg({ ok: false, text: 'เชื่อมต่อไม่ได้' })
+    } finally { setActing(null) }
+  }
+
+  async function savePaySettings(e) {
+    e.preventDefault()
+    setSavingPay(true); setPayMsg(null)
+    const fd = new FormData()
+    fd.append('bank_name', bankName)
+    fd.append('account', account)
+    fd.append('account_name', accountName)
+    if (qrRef.current?.files[0]) fd.append('qr_image', qrRef.current.files[0])
+    try {
+      const res = await fetch(`${API}/admin-api/payment-settings/`, {
+        method: 'POST',
+        headers: { 'X-Admin-Token': token },
+        body: fd,
+      })
+      const d = await res.json()
+      if (res.ok) {
+        setPayMsg({ ok: true, text: '✅ บันทึกแล้ว' })
+        setPaySettings(d)
+        if (qrRef.current) qrRef.current.value = ''
+      } else {
+        setPayMsg({ ok: false, text: `❌ ${d.detail}` })
+      }
+    } catch {
+      setPayMsg({ ok: false, text: '❌ เชื่อมต่อไม่ได้' })
+    } finally { setSavingPay(false) }
+  }
+
+  const STATUS_COLOR = { pending: '#f59e0b', approved: '#10b981', rejected: '#ef4444' }
+  const STATUS_LABEL = { pending: '⏳ รอตรวจ', approved: '✅ อนุมัติ', rejected: '❌ ปฏิเสธ' }
+
+  return (
+    <div>
+      {/* Payment Settings */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 className={styles.sectionTitle}>⚙️ ตั้งค่าช่องทางชำระเงิน</h2>
+        <form onSubmit={savePaySettings} style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480 }}>
+          <div>
+            <label className={styles.editorLabel}>ชื่อธนาคาร</label>
+            <input className={styles.editorInput} value={bankName} onChange={e => setBankName(e.target.value)} placeholder="ธนาคารออมสิน (GSB)" />
+          </div>
+          <div>
+            <label className={styles.editorLabel}>เลขที่บัญชี</label>
+            <input className={styles.editorInput} value={account} onChange={e => setAccount(e.target.value)} placeholder="020 481 751 756" />
+          </div>
+          <div>
+            <label className={styles.editorLabel}>ชื่อบัญชี</label>
+            <input className={styles.editorInput} value={accountName} onChange={e => setAccountName(e.target.value)} placeholder="นางสาวพัทธนันท์ ป้อมสุวรรณ" />
+          </div>
+          <div>
+            <label className={styles.editorLabel}>QR Code (ไม่บังคับ — ถ้าไม่ใส่จะไม่แสดงในหน้าเติมเครดิต)</label>
+            {paySettings?.qr_url && (
+              <div style={{ marginBottom: 8 }}>
+                <img src={paySettings.qr_url} alt="QR" style={{ width: 100, height: 100, borderRadius: 8, background: '#fff', padding: 4 }} />
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>QR ปัจจุบัน — อัปโหลดใหม่เพื่อแทนที่</div>
+              </div>
+            )}
+            <input ref={qrRef} type="file" accept="image/*" className={styles.thumbFileInput} />
+          </div>
+          {payMsg && (
+            <div className={`${styles.demoMsg} ${payMsg.ok ? styles.demoMsgOk : styles.demoMsgErr}`}>{payMsg.text}</div>
+          )}
+          <button className={styles.editorSave} type="submit" disabled={savingPay} style={{ alignSelf: 'flex-start' }}>
+            {savingPay ? '⏳ กำลังบันทึก...' : '💾 บันทึกการตั้งค่า'}
+          </button>
+        </form>
+      </div>
+
+      {/* Orders */}
+      <h2 className={styles.sectionTitle}>📋 รายการสลิปรอตรวจสอบ</h2>
+
+      <div className={styles.filterTabs} style={{ marginBottom: 16 }}>
+        {[['pending', '⏳ รอตรวจ'], ['approved', '✅ อนุมัติ'], ['rejected', '❌ ปฏิเสธ'], ['all', 'ทั้งหมด']].map(([k, l]) => (
+          <button key={k} className={`${styles.filterTab} ${filter === k ? styles.filterTabActive : ''}`}
+            onClick={() => setFilter(k)}>{l}</button>
+        ))}
+      </div>
+
+      {msg && (
+        <div className={`${styles.demoMsg} ${msg.ok ? styles.demoMsgOk : styles.demoMsgErr}`} style={{ marginBottom: 14 }}>
+          {msg.text}
+        </div>
+      )}
+
+      {loading ? (
+        <div className={styles.loading}>กำลังโหลด...</div>
+      ) : orders.length === 0 ? (
+        <p className={styles.empty}>ไม่มีรายการ</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {orders.map(o => (
+            <div key={o.id} style={{
+              background: 'rgba(255,255,255,.04)',
+              border: '1px solid rgba(255,255,255,.1)',
+              borderRadius: 14,
+              padding: '16px 18px',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#e2e8f0', marginBottom: 2 }}>
+                    #{o.id} · {o.user_name}
+                    <span style={{ fontWeight: 400, color: '#64748b', fontSize: '0.8rem' }}> ({o.user_email})</span>
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                    {o.credits} เครดิต — ฿{o.amount} · {o.created_at}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 2 }}>
+                    เครดิตปัจจุบัน: {o.user_credits}
+                  </div>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: STATUS_COLOR[o.status] || '#94a3b8', flexShrink: 0 }}>
+                  {STATUS_LABEL[o.status] || o.status}
+                </div>
+              </div>
+
+              {o.slip_url && (
+                <a href={o.slip_url} target="_blank" rel="noreferrer">
+                  <img src={o.slip_url} alt="slip"
+                    style={{ maxWidth: 180, maxHeight: 240, borderRadius: 8, display: 'block', marginBottom: 12, border: '1px solid rgba(255,255,255,.1)' }}
+                  />
+                </a>
+              )}
+
+              {o.status === 'pending' && (
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input
+                    style={{
+                      flex: 1, minWidth: 140,
+                      background: 'rgba(255,255,255,.06)',
+                      border: '1px solid rgba(255,255,255,.15)',
+                      borderRadius: 8, padding: '7px 12px',
+                      color: '#e2e8f0', fontSize: '0.82rem',
+                    }}
+                    placeholder="หมายเหตุ (ไม่บังคับ)"
+                    value={note}
+                    onChange={e => setNote(e.target.value)}
+                  />
+                  <button
+                    onClick={() => doAction(o.id, 'approve')}
+                    disabled={!!acting}
+                    style={{
+                      background: '#059669', color: '#fff', border: 'none',
+                      borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: '0.85rem',
+                      cursor: acting ? 'not-allowed' : 'pointer', opacity: acting ? 0.6 : 1,
+                    }}
+                  >
+                    {acting === o.id ? '⏳...' : '✅ อนุมัติ'}
+                  </button>
+                  <button
+                    onClick={() => doAction(o.id, 'reject')}
+                    disabled={!!acting}
+                    style={{
+                      background: '#dc2626', color: '#fff', border: 'none',
+                      borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: '0.85rem',
+                      cursor: acting ? 'not-allowed' : 'pointer', opacity: acting ? 0.6 : 1,
+                    }}
+                  >
+                    ❌ ปฏิเสธ
+                  </button>
+                </div>
+              )}
+
+              {o.status !== 'pending' && o.admin_note && (
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>หมายเหตุ: {o.admin_note}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────
 // Credit Alerts — แสดงเตือนบน Dashboard ถ้า AI ไหนเครดิตหมด/ต่ำ
 // ──────────────────────────────────────────────
 function CreditAlerts({ token }) {
@@ -1104,7 +1345,8 @@ function Dashboard({ token }) {
   const tabs = [
     { key: 'dashboard', label: '📊 Dashboard' },
     { key: 'chats', label: '💬 Chats', badge: stats?.chats_unread },
-    { key: 'credits', label: '💳 Credits' },
+    { key: 'orders', label: '💸 เติมเครดิต' },
+    { key: 'credits', label: '💳 API Credits' },
     { key: 'demos', label: '🎬 Demo Clips' },
     { key: 'site', label: '🌐 หน้าเว็บ' },
   ]
@@ -1183,6 +1425,12 @@ function Dashboard({ token }) {
       {tab === 'chats' && selectedChat && (
         <div className={styles.content}>
           <ChatDetail sessionId={selectedChat} token={token} onBack={() => setSelectedChat(null)} />
+        </div>
+      )}
+
+      {tab === 'orders' && (
+        <div className={styles.content}>
+          <PaymentOrdersSection token={token} />
         </div>
       )}
 

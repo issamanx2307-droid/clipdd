@@ -95,19 +95,19 @@ function VideoCard({ slot, label, badge, title, bg, emoji }) {
 
 const PLANS = [
   {
-    name: 'ทดลองฟรี', price: '0', unit: 'บาท', desc: 'ไม่ต้องใส่บัตรเครดิต',
-    features: ['1 คลิป ฟรีทันที', 'ทุกสไตล์', 'เสียงพากย์ AI', 'ดาวน์โหลดได้'],
+    name: 'ฟรี 1 คลิปแรก', price: '0', unit: 'บาท', desc: 'สมัครแล้วได้ทันที ไม่ต้องใส่บัตรเครดิต',
+    features: ['1 คลิปฟรีทันที', 'ทุกสไตล์', 'เสียงพากย์ AI', 'ดาวน์โหลดได้'],
     cta: 'เริ่มฟรีเลย', href: '/register', highlight: false,
   },
   {
-    name: 'Pro', price: '299', unit: 'บาท/เดือน', desc: 'สำหรับร้านที่ต้องการเติบโต',
-    features: ['ไม่จำกัดจำนวนคลิป', 'ทุกสไตล์', 'เสียงพากย์ AI ทุกรูปแบบ', 'ซับไตเติลอัตโนมัติ', 'Export HD'],
-    cta: 'เริ่มต้น Pro', href: '/register', highlight: true,
+    name: '1 เครดิต', price: '89', unit: 'บาท', desc: 'จ่ายเฉพาะที่ใช้ ไม่มีค่ารายเดือน',
+    features: ['สร้างได้ 1 คลิป', 'ทุกสไตล์', 'เสียงพากย์ AI 8 เสียง', 'ซับไตเติลอัตโนมัติ', 'Export HD'],
+    cta: 'เติมเครดิต', href: '/topup', highlight: false,
   },
   {
-    name: 'Business', price: '799', unit: 'บาท/เดือน', desc: 'สำหรับธุรกิจหลายแบรนด์',
-    features: ['ทุกอย่างใน Pro', 'หลาย Workspace', 'API Access', 'Support 24/7', 'Custom Voice'],
-    cta: 'ติดต่อเรา', href: '/contact', highlight: false,
+    name: '5 เครดิต', price: '399', unit: 'บาท', desc: 'ประหยัดกว่า 10% เหมาะสำหรับร้านค้า',
+    features: ['สร้างได้ 5 คลิป', 'ทุกสไตล์', 'เสียงพากย์ AI 8 เสียง', 'ซับไตเติลอัตโนมัติ', 'Export HD', 'ไม่หมดอายุ'],
+    cta: 'เติมเครดิต', href: '/topup', highlight: true,
   },
 ]
 
