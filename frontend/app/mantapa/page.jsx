@@ -1214,13 +1214,31 @@ function CreditAlerts({ token }) {
 function MaintenanceToggle({ token }) {
   const [info, setInfo] = useState(null)  // { maintenance, auto, reason, triggered_at }
   const [saving, setSaving] = useState(false)
+  const [fetchErr, setFetchErr] = useState(null)
+
+  const loadInfo = useCallback(async () => {
+    setFetchErr(null)
+    try {
+      const res = await fetch(`${API}/admin-api/maintenance/`, {
+        headers: { 'X-Admin-Token': token },
+      })
+      if (!res.ok) {
+        setFetchErr(`HTTP ${res.status}`)
+        return
+      }
+      const d = await res.json()
+      setInfo(d)
+    } catch (e) {
+      setFetchErr(`เชื่อมต่อไม่ได้: ${e.message}`)
+    }
+  }, [token])
 
   useEffect(() => {
-    fetch(`${API}/admin-api/maintenance/`, { headers: { 'X-Admin-Token': token } })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setInfo(d) })
-      .catch(() => {})
-  }, [token])
+    loadInfo()
+    // Auto-refresh ทุก 30 วินาที เพื่อให้ state ตรงกับ DB เสมอ
+    const iv = setInterval(loadInfo, 30000)
+    return () => clearInterval(iv)
+  }, [loadInfo])
 
   async function toggle() {
     if (info === null || saving) return
@@ -1233,8 +1251,10 @@ function MaintenanceToggle({ token }) {
       })
       const d = await res.json()
       if (res.ok) setInfo(d)
-    } catch {}
-    finally { setSaving(false) }
+      else setFetchErr(`บันทึกไม่ได้: HTTP ${res.status}`)
+    } catch (e) {
+      setFetchErr(`เชื่อมต่อไม่ได้: ${e.message}`)
+    } finally { setSaving(false) }
   }
 
   const isOn = info?.maintenance === true
@@ -1242,6 +1262,24 @@ function MaintenanceToggle({ token }) {
 
   return (
     <div style={{ marginBottom: 24 }}>
+      {/* Fetch error banner */}
+      {fetchErr && (
+        <div style={{
+          background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.4)',
+          borderRadius: 10, padding: '10px 16px', marginBottom: 10,
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <span>🚨</span>
+          <span style={{ flex: 1, fontSize: '0.84rem', color: '#fca5a5' }}>
+            โหลด maintenance status ไม่ได้: {fetchErr}
+          </span>
+          <button onClick={loadInfo} style={{
+            background: 'none', border: '1px solid #ef4444', color: '#f87171',
+            borderRadius: 6, padding: '4px 12px', fontSize: '0.8rem', cursor: 'pointer',
+          }}>↻ ลองใหม่</button>
+        </div>
+      )}
+
       {/* Auto-trigger warning banner */}
       {isAuto && (
         <div style={{
@@ -1282,8 +1320,8 @@ function MaintenanceToggle({ token }) {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <span style={{ fontSize: '1.4rem' }}>{isOn ? '🔧' : '✅'}</span>
-            <span style={{ fontWeight: 800, fontSize: '1rem', color: isOn ? '#fbbf24' : '#34d399' }}>
-              {info === null ? 'กำลังโหลด...' : isOn ? 'ระบบปิดอยู่ (Maintenance)' : 'ระบบเปิดปกติ'}
+            <span style={{ fontWeight: 800, fontSize: '1rem', color: info === null ? '#64748b' : isOn ? '#fbbf24' : '#34d399' }}>
+              {info === null ? (fetchErr ? '⚠️ โหลดไม่ได้' : 'กำลังโหลด...') : isOn ? 'ระบบปิดอยู่ (Maintenance)' : 'ระบบเปิดปกติ'}
             </span>
             {isAuto && (
               <span style={{

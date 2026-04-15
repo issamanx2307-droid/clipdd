@@ -1,8 +1,13 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import styles from './ChatWidget.module.css'
 
+// หน้าที่ไม่ต้องการ ChatWidget
+const HIDDEN_PATHS = ['/mantapa', '/login', '/register']
+
 export default function ChatWidget() {
+  const pathname = usePathname()
   const [hydrated, setHydrated] = useState(false)
   const [token, setToken] = useState(null)
   const [open, setOpen] = useState(false)
@@ -86,7 +91,9 @@ export default function ChatWidget() {
     }
   }
 
+  // ซ่อนในหน้าที่ไม่ต้องการ
   if (!hydrated || !token) return null
+  if (HIDDEN_PATHS.some(p => pathname?.startsWith(p))) return null
 
   return (
     <>
