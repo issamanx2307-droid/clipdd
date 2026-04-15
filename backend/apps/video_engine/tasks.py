@@ -270,24 +270,26 @@ def _generate_voice_botnoi(text, output_path, speaker='1'):
     if not botnoi_token:
         raise Exception('BOTNOI_API_KEY ไม่ได้ตั้งค่า — กรุณาเพิ่มใน .env แล้ว restart')
 
+    import json as _json
     logger.info(f"Botnoi TTS: speaker={speaker} text_len={len(text)} token_prefix={botnoi_token[:8]}")
+    payload = _json.dumps({
+        'text': text,
+        'speaker': str(speaker),
+        'volume': 1,
+        'speed': 1,
+        'type_media': 'mp3',
+        'save_file': 'true',
+        'language': 'th',
+    }, ensure_ascii=False).encode('utf-8')   # ส่ง UTF-8 ดิบ ไม่ escape Thai เป็น \uXXXX
     resp = requests.post(
         'https://api-voice.botnoi.ai/openapi/v1/generate_audio',
         headers={
             'botnoi-token': botnoi_token,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=utf-8',
             'User-Agent': 'Mozilla/5.0',
             'Accept': 'application/json',
         },
-        json={
-            'text': text,
-            'speaker': str(speaker),
-            'volume': 1,
-            'speed': 1,
-            'type_media': 'mp3',
-            'save_file': 'true',
-            'language': 'th',
-        },
+        data=payload,
         timeout=60,
     )
     logger.info(f"Botnoi TTS response: status={resp.status_code} body={resp.text[:300]}")
