@@ -167,7 +167,7 @@ class VoicePreviewView(APIView):
         if not speaker.isdigit() or int(speaker) < 1 or int(speaker) > 8:
             return Response({'detail': 'speaker ต้องเป็น 1-8'}, status=status.HTTP_400_BAD_REQUEST)
 
-        botnoi_token = getattr(_settings, 'BOTNOI_API_KEY', '')
+        botnoi_token = getattr(_settings, 'BOTNOI_API_KEY', '').strip()
         if not botnoi_token:
             return Response({'detail': 'BOTNOI_API_KEY ไม่ได้ตั้งค่า'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
@@ -188,9 +188,10 @@ class VoicePreviewView(APIView):
             )
             resp.raise_for_status()
             data = resp.json()
-            audio_url = data.get('audio_url')
+            # Botnoi returns 'audio_url' or 'file' depending on API version
+            audio_url = data.get('audio_url') or data.get('file')
             if not audio_url:
-                return Response({'detail': f'Botnoi ไม่ส่ง audio_url: {data}'}, status=status.HTTP_502_BAD_GATEWAY)
+                return Response({'detail': f'Botnoi ไม่ส่ง audio URL — keys: {list(data.keys())}'}, status=status.HTTP_502_BAD_GATEWAY)
             return Response({'audio_url': audio_url})
         except _req.exceptions.RequestException as e:
             return Response({'detail': f'Botnoi error: {e}'}, status=status.HTTP_502_BAD_GATEWAY)

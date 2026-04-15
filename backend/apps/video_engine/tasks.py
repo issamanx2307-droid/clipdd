@@ -266,7 +266,7 @@ def _generate_voice_botnoi(text, output_path, speaker='1'):
     Generate TTS via Botnoi Voice API. Downloads mp3 to output_path.
     ไม่มี fallback — ถ้า fail ให้ raise exception เพื่อหยุด pipeline
     """
-    botnoi_token = getattr(settings, 'BOTNOI_API_KEY', '')
+    botnoi_token = getattr(settings, 'BOTNOI_API_KEY', '').strip()
     if not botnoi_token:
         raise Exception('BOTNOI_API_KEY ไม่ได้ตั้งค่า — กรุณาเพิ่มใน .env แล้ว restart')
 
@@ -287,11 +287,17 @@ def _generate_voice_botnoi(text, output_path, speaker='1'):
         },
         timeout=60,
     )
+    if resp.status_code == 404:
+        raise Exception(
+            f'Botnoi TTS 404 — ตรวจสอบ BOTNOI_API_KEY ใน .env '
+            f'(token prefix: {botnoi_token[:8]}...)'
+        )
     resp.raise_for_status()
     data = resp.json()
-    audio_url = data.get('audio_url')
+    # Botnoi returns 'audio_url' or 'file' depending on API version
+    audio_url = data.get('audio_url') or data.get('file')
     if not audio_url:
-        raise Exception(f'Botnoi TTS: ไม่ได้รับ audio_url — response: {data}')
+        raise Exception(f'Botnoi TTS: ไม่ได้รับ audio URL — response keys: {list(data.keys())}')
     download_file(audio_url, output_path)
     logger.info(f"Botnoi TTS done: speaker={speaker} points_left={data.get('point')}")
     return output_path
