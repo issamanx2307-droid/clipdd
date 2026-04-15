@@ -58,13 +58,15 @@ const BOTNOI_VOICES = [
 ]
 
 function VoiceSelector({ voice, setVoice }) {
-  const [previewing, setPreviewing] = useState(null) // speaker id being loaded
+  const [previewing, setPreviewing] = useState(null)
+  const [previewError, setPreviewError] = useState(null)
   const audioRef = useRef(null)
 
   async function handlePreview(e, spk) {
     e.stopPropagation()
     if (previewing === spk) return
     setPreviewing(spk)
+    setPreviewError(null)
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('cd_token') : null
       const res = await fetch('/api/voice-preview/', {
@@ -73,42 +75,62 @@ function VoiceSelector({ voice, setVoice }) {
         body: JSON.stringify({ speaker: spk }),
       })
       const data = await res.json()
+      if (!res.ok) {
+        setPreviewError(data.detail || `Error ${res.status}`)
+        return
+      }
       if (data.audio_url) {
         if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
         const audio = new Audio(data.audio_url)
         audioRef.current = audio
-        audio.play()
+        await audio.play()
+      } else {
+        setPreviewError('ไม่ได้รับ audio_url')
       }
-    } catch {}
-    finally { setPreviewing(null) }
+    } catch (err) {
+      setPreviewError(err?.message || 'เกิดข้อผิดพลาด')
+    } finally {
+      setPreviewing(null)
+    }
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-      {BOTNOI_VOICES.map(v => (
-        <button key={v.value} type="button"
-          onClick={() => setVoice(v.value)}
-          style={{
-            background: voice === v.value ? 'rgba(229,62,62,.15)' : '#111827',
-            border: `1px solid ${voice === v.value ? '#E53E3E' : '#1e293b'}`,
-            borderRadius: 10, padding: '10px 8px 8px',
-            cursor: 'pointer', textAlign: 'center', position: 'relative',
-            transition: 'border-color .15s',
-          }}>
-          <div style={{ fontSize: '1.3rem', marginBottom: 2 }}>{v.emoji}</div>
-          <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#e2e8f0' }}>{v.label}</div>
-          <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: 6 }}>{v.desc}</div>
-          <div
-            onClick={e => handlePreview(e, v.value)}
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        {BOTNOI_VOICES.map(v => (
+          <button key={v.value} type="button"
+            onClick={() => setVoice(v.value)}
             style={{
-              fontSize: '0.7rem', padding: '3px 8px', borderRadius: 6,
-              background: previewing === v.value ? '#334155' : '#1e293b',
-              color: '#94a3b8', cursor: 'pointer', display: 'inline-block',
+              background: voice === v.value ? 'rgba(229,62,62,.15)' : '#111827',
+              border: `1px solid ${voice === v.value ? '#E53E3E' : '#1e293b'}`,
+              borderRadius: 10, padding: '10px 8px 8px',
+              cursor: 'pointer', textAlign: 'center', position: 'relative',
+              transition: 'border-color .15s',
             }}>
-            {previewing === v.value ? '⏳' : '▶ ลองเสียง'}
-          </div>
-        </button>
-      ))}
+            <div style={{ fontSize: '1.3rem', marginBottom: 2 }}>{v.emoji}</div>
+            <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#e2e8f0' }}>{v.label}</div>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: 6 }}>{v.desc}</div>
+            <div
+              onClick={e => handlePreview(e, v.value)}
+              style={{
+                fontSize: '0.7rem', padding: '3px 8px', borderRadius: 6,
+                background: previewing === v.value ? '#334155' : '#1e293b',
+                color: '#94a3b8', cursor: 'pointer', display: 'inline-block',
+              }}>
+              {previewing === v.value ? '⏳' : '▶ ลองเสียง'}
+            </div>
+          </button>
+        ))}
+      </div>
+      {previewError && (
+        <div style={{
+          marginTop: 8, padding: '8px 12px', borderRadius: 8,
+          background: 'rgba(239,68,68,.1)', border: '1px solid #ef4444',
+          fontSize: '0.78rem', color: '#fca5a5',
+        }}>
+          ⚠️ ลองเสียงไม่ได้: {previewError}
+        </div>
+      )}
     </div>
   )
 }
