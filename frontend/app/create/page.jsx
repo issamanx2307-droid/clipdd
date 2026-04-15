@@ -135,6 +135,95 @@ function VoiceSelector({ voice, setVoice }) {
   )
 }
 
+// ── Funny Clip Popup (shown while generating_video) ──────
+function FunnyClipPopup({ show, onClose }) {
+  const [clips, setClips] = useState([])
+  const [idx, setIdx]     = useState(0)
+  const videoRef          = useRef(null)
+
+  useEffect(() => {
+    fetch('/api/clip-thumbnails/')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return
+        const arr = Array.isArray(data) ? data : (data.results || [])
+        const videos = arr.filter(c => c.file_type === 'video')
+        if (videos.length) setClips([...videos].sort(() => Math.random() - 0.5))
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (show && clips.length && videoRef.current) {
+      videoRef.current.load()
+      videoRef.current.play().catch(() => {})
+    }
+  }, [show, idx, clips])
+
+  function nextClip() { setIdx(i => (i + 1) % clips.length) }
+
+  if (!show || !clips.length) return null
+  const clip = clips[idx]
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.82)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16,
+    }}>
+      <div style={{
+        background: '#111827', borderRadius: 20,
+        width: '100%', maxWidth: 340, overflow: 'hidden',
+        border: '1px solid #1e293b',
+        boxShadow: '0 24px 64px rgba(0,0,0,.85)',
+      }}>
+        {/* Header */}
+        <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: '0.9rem' }}>
+              😄 ระหว่างรอ ดูคลิปสนุกๆ ก่อนเลย!
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 3 }}>
+              ⏳ AI กำลังสร้างคลิปของคุณอยู่...
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', color: '#64748b',
+            fontSize: '1.1rem', cursor: 'pointer', padding: '2px 6px', lineHeight: 1,
+          }}>✕</button>
+        </div>
+
+        {/* Video (portrait 9:16) */}
+        <div style={{ position: 'relative', paddingBottom: '177.78%', background: '#000' }}>
+          <video
+            ref={videoRef}
+            key={clip.id}
+            src={clip.file_url}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            autoPlay muted playsInline
+            onEnded={nextClip}
+          />
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: '0.82rem', color: '#e2e8f0', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {clip.title || 'คลิปสนุกๆ'}
+          </div>
+          <button onClick={nextClip} style={{
+            background: '#1e293b', border: '1px solid #334155',
+            color: '#94a3b8', fontSize: '0.75rem',
+            padding: '6px 14px', borderRadius: 999, cursor: 'pointer', flexShrink: 0,
+          }}>
+            ต่อไป ▶
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Editable text field ──────────────────────────────────
 function EditableField({ label, value, onChange, hint, multiline, maxLen }) {
   const [editing, setEditing] = useState(false)
@@ -214,6 +303,7 @@ function CreateInner() {
   const [credits, setCredits]       = useState(null)
   const [isStaff, setIsStaff]       = useState(false)
   const [maintenance, setMaintenance] = useState(false)
+  const [showFunnyPopup, setShowFunnyPopup] = useState(false)
   const pollRef                     = useRef(null)
 
   useEffect(() => {
@@ -346,6 +436,12 @@ function CreateInner() {
     if (res.ok) setStage('awaiting_script_approval')
     else setStage('done')
   }
+
+  // ── Funny popup: open when generating, close when done/failed ──
+  useEffect(() => {
+    if (stage === 'generating_video') setShowFunnyPopup(true)
+    else if (stage === 'done' || stage === 'form') setShowFunnyPopup(false)
+  }, [stage])
 
   // ── Script helpers ──
   function updateBody(i, val) {
@@ -612,6 +708,8 @@ function CreateInner() {
         )}
 
       </div>
+
+      <FunnyClipPopup show={showFunnyPopup} onClose={() => setShowFunnyPopup(false)} />
     </div>
   )
 }
