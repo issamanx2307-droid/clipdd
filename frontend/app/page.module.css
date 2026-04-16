@@ -12,7 +12,7 @@
   background: #09090f;
   color: #f1f5f9;
   font-family: 'Noto Sans Thai', system-ui, sans-serif;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* ── NAV ── */
@@ -146,7 +146,9 @@
   border: 1px solid #1e293b;
   transition: transform .2s, box-shadow .2s;
 }
-.heroCard:hover { transform:translateY(-4px); box-shadow:0 8px 32px rgba(229,62,62,.15) }
+.heroCard:hover { transform:translateY(-6px); box-shadow:0 12px 40px rgba(229,62,62,.25), 0 0 0 1.5px rgba(229,62,62,.3) }
+.heroCardEmoji { font-size:2.6rem; transition:transform .2s }
+.heroCard:hover .heroCardEmoji { transform:scale(1.25) }
 .heroCardThumb {
   aspect-ratio: 9 / 16;
   position: relative;
@@ -161,7 +163,7 @@
   justify-content: center;
   transition: opacity .3s;
 }
-.heroCardEmoji { font-size: 2.6rem }
+/* heroCardEmoji is now defined with hover above */
 .heroCardVideo {
   position: absolute;
   inset: 0;

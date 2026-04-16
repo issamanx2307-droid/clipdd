@@ -171,13 +171,71 @@ function ClipCard({ clip }) {
   )
 }
 
+function FunnyClipCard({ clip }) {
+  const isVideo = clip.file_type === 'video'
+  const vidRef = useRef(null)
+  const [hovered, setHovered] = useState(false)
+
+  function onEnter() {
+    setHovered(true)
+    if (isVideo && vidRef.current) vidRef.current.play().catch(() => {})
+  }
+  function onLeave() {
+    setHovered(false)
+    if (isVideo && vidRef.current) { vidRef.current.pause(); vidRef.current.currentTime = 0 }
+  }
+
+  return (
+    <a href="/clips" style={{
+      display:'block', textDecoration:'none', borderRadius:14, overflow:'hidden',
+      background:'#111827', border:`1px solid ${hovered ? '#E53E3E55' : '#1e293b'}`,
+      boxShadow: hovered ? '0 8px 32px rgba(229,62,62,.15)' : '0 2px 8px rgba(0,0,0,.4)',
+      transition:'transform .2s, border-color .2s, box-shadow .2s',
+      transform: hovered ? 'translateY(-4px) scale(1.01)' : 'none',
+    }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
+      <div style={{ position:'relative', paddingBottom:'62.5%', background:'#0d1117', overflow:'hidden' }}>
+        {isVideo ? (
+          <video ref={vidRef} src={clip.file_url}
+            style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}
+            muted loop playsInline preload="metadata"
+            onLoadedMetadata={() => { if (vidRef.current) vidRef.current.currentTime = 0.1 }} />
+        ) : (
+          <img src={clip.file_url} alt={clip.title || ''}
+            style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
+        )}
+        {isVideo && !hovered && (
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center',
+            justifyContent:'center', background:'rgba(0,0,0,.3)' }}>
+            <div style={{ width:40, height:40, borderRadius:'50%',
+              background:'rgba(229,62,62,.85)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <span style={{ fontSize:'1rem', marginLeft:3 }}>▶</span>
+            </div>
+          </div>
+        )}
+        <div style={{ position:'absolute', top:8, left:8, background:'rgba(30,41,59,.85)',
+          color:'#fff', fontSize:'0.68rem', fontWeight:700, padding:'2px 8px',
+          borderRadius:999, backdropFilter:'blur(4px)' }}>
+          {isVideo ? '🎬 วิดีโอ' : '🖼️ รูปภาพ'}
+        </div>
+      </div>
+      {clip.title && (
+        <div style={{ padding:'8px 12px', fontSize:'0.75rem', color:'#94a3b8',
+          overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          {clip.title}
+        </div>
+      )}
+    </a>
+  )
+}
+
 export default function Home() {
   const [activeStyle, setActiveStyle] = useState('all')
   const [hero, setHero] = useState(DEFAULT_HERO)
   const [stats, setStats] = useState(DEFAULT_STATS)
   const [deals, setDeals] = useState(DEFAULT_DEALS)
   const [articles, setArticles] = useState(DEFAULT_ARTICLES)
-  const [customerClips, setCustomerClips] = useState(null)  // null = loading
+  const [customerClips, setCustomerClips] = useState(null)
+  const [funnyClips, setFunnyClips] = useState([])
 
   useEffect(() => {
     fetch('/api/site-content/').then(r => r.ok ? r.json() : null).then(data => {
@@ -190,6 +248,9 @@ export default function Home() {
     fetch('/api/videos/recent/').then(r => r.ok ? r.json() : []).then(data => {
       setCustomerClips(Array.isArray(data) ? data : [])
     }).catch(() => setCustomerClips([]))
+    fetch('/api/clip-thumbnails/').then(r => r.ok ? r.json() : []).then(data => {
+      setFunnyClips(Array.isArray(data) ? data.slice(0, 8) : [])
+    }).catch(() => {})
   }, [])
 
   return (
@@ -300,6 +361,21 @@ export default function Home() {
           </div>
         </div>
       </AnimSection>
+
+      {/* ── FUNNY CLIPS (clip thumbnails gallery) ── */}
+      {funnyClips.length > 0 && (
+        <AnimSection>
+          <div className={styles.clipsSection}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>😂 รวมคลิปขำๆ ดูฟรี</h2>
+              <a href="/clips" className={styles.sectionMore}>ดูทั้งหมด ({funnyClips.length}+) →</a>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:16 }}>
+              {funnyClips.map(clip => <FunnyClipCard key={clip.id} clip={clip} />)}
+            </div>
+          </div>
+        </AnimSection>
+      )}
 
       {/* ── DEALS / AFFILIATE ── */}
       <AnimSection>
