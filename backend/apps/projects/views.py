@@ -1,4 +1,6 @@
 from django.conf import settings
+from django.db import transaction
+from django.db.models import F
 from apps.support.views import _get_maintenance_mode
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -8,6 +10,7 @@ from .models import Project, ProductImage, GeneratedImage
 from .serializers import ProjectSerializer, CreateProjectSerializer, GeneratedImageSerializer
 from apps.video_engine.tasks import generate_script_task, generate_video_task
 from apps.video_engine.utils import normalize_script_data
+from apps.users.models import User
 
 
 class ProjectListCreateView(generics.ListCreateAPIView):
@@ -30,19 +33,23 @@ class ProjectListCreateView(generics.ListCreateAPIView):
 
         serializer = CreateProjectSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        project = serializer.save(user=user)
 
-        # Save uploaded images with type
-        product_image = request.FILES.get('product_image')
-        person_image = request.FILES.get('person_image')
-        if product_image:
-            ProductImage.objects.create(project=project, image=product_image, image_type='product')
-        if person_image:
-            ProductImage.objects.create(project=project, image=person_image, image_type='person')
+        with transaction.atomic():
+            # Atomic credit deduction — prevents race condition when two requests arrive simultaneously
+            deducted = User.objects.filter(pk=user.pk, credits__gte=1).update(credits=F('credits') - 1)
+            if not deducted:
+                return Response({'detail': 'เครดิตหมดแล้ว กรุณาอัพเกรดแพลน'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Deduct credit — generate script first (user will approve before video)
-        user.credits -= 1
-        user.save(update_fields=['credits'])
+            project = serializer.save(user=user)
+
+            # Save uploaded images with type
+            product_image = request.FILES.get('product_image')
+            person_image = request.FILES.get('person_image')
+            if product_image:
+                ProductImage.objects.create(project=project, image=product_image, image_type='product')
+            if person_image:
+                ProductImage.objects.create(project=project, image=person_image, image_type='person')
+
         generate_script_task.apply_async(args=[project.id], queue='video')
 
         return Response(ProjectSerializer(project).data, status=status.HTTP_201_CREATED)

@@ -3,7 +3,12 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
+_secret_key = os.environ.get('SECRET_KEY', '')
+if not _secret_key:
+    import warnings
+    warnings.warn('SECRET_KEY not set in environment — using insecure fallback. DO NOT use in production.', stacklevel=2)
+    _secret_key = 'django-insecure-dev-key-change-in-production'
+SECRET_KEY = _secret_key
 
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
@@ -130,8 +135,11 @@ GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 # Botnoi (Thai TTS)
 BOTNOI_API_KEY = os.environ.get('BOTNOI_API_KEY', '')
 
-# Admin Panel
-ADMIN_PANEL_PASSWORD = os.environ.get('ADMIN_PANEL_PASSWORD', 'mantapa2025')
+# Admin Panel — must be set in .env; no hardcoded fallback in production
+ADMIN_PANEL_PASSWORD = os.environ.get('ADMIN_PANEL_PASSWORD', '')
+if not ADMIN_PANEL_PASSWORD:
+    import warnings
+    warnings.warn('ADMIN_PANEL_PASSWORD not set — admin panel will be inaccessible.', stacklevel=2)
 
 # Google OAuth
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')

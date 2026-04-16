@@ -581,7 +581,7 @@ def download_file(url, output_path):
 # CELERY TASK 0 — Generate Script Only (for user preview/edit)
 # ─────────────────────────────────────────────
 
-@shared_task(bind=True, max_retries=2, queue='video')
+@shared_task(bind=True, max_retries=2, queue='video', soft_time_limit=60, time_limit=90)
 def _preflight_kling_check(motion_prompt, audio_path, audio_duration,
                            product_img_name, media_dir):
     """
@@ -630,6 +630,7 @@ def _preflight_kling_check(motion_prompt, audio_path, audio_duration,
     )
 
 
+@shared_task(bind=True, max_retries=2, queue='video', soft_time_limit=120, time_limit=150)
 def generate_script_task(self, project_id):
     """
     GPT generates script + overlay data → saves to RenderJob.script_data
@@ -691,7 +692,7 @@ def generate_script_task(self, project_id):
 # Worker is FREE after ~30s — no more 6-min block
 # ─────────────────────────────────────────────
 
-@shared_task(bind=True, max_retries=2, queue='video')
+@shared_task(bind=True, max_retries=2, queue='video', soft_time_limit=300, time_limit=360)
 def generate_video_task(self, project_id):
     """
     Phase 1 — New async pipeline (no Flux, no image selection step):
@@ -864,7 +865,7 @@ def generate_video_task(self, project_id):
 # Ken Burns + Pillow overlay + FFmpeg
 # ─────────────────────────────────────────────
 
-@shared_task(bind=True, max_retries=2, queue='video')
+@shared_task(bind=True, max_retries=2, queue='video', soft_time_limit=600, time_limit=660)
 def assemble_video_task(self, project_id, kling_video_url):
     """
     Phase 2 — triggered by KlingWebhookView after fal.ai POSTs back.
@@ -1018,7 +1019,7 @@ def assemble_video_task(self, project_id, kling_video_url):
 # If fal.ai webhook was not received within 8 min, poll manually
 # ─────────────────────────────────────────────
 
-@shared_task(bind=True, max_retries=5, queue='video')
+@shared_task(bind=True, max_retries=5, queue='video', soft_time_limit=120, time_limit=150)
 def poll_kling_fallback(self, project_id):
     """
     Fallback: poll fal.ai for Kling result if webhook never arrived.

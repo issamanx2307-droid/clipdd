@@ -141,7 +141,7 @@ def call_user_function(name, args, user):
             p = Project.objects.get(pk=args.get("project_id"), user=user)
             d = {"id": p.id, "product": p.product_name, "status": p.status}
             try: d["progress"] = p.render_job.progress; d["error"] = p.render_job.error
-            except: pass
+            except Exception: pass
             try:
                 d["video_url"] = absolute_media_url(p.video.video_url)
             except Exception:
@@ -238,7 +238,8 @@ def call_admin_function(name, args):
         try:
             from apps.video_engine.models import VideoOutput
             videos = VideoOutput.objects.count()
-        except: videos = 0
+        except Exception:
+            videos = 0
         return {
             "users_total": User.objects.count(),
             "users_today": User.objects.filter(created_at__date=today).count(),
@@ -265,7 +266,7 @@ def call_admin_function(name, args):
         for p in qs:
             d = {"id": p.id, "product": p.product_name, "user": p.user.email, "created_at": str(p.created_at)[:16]}
             try: d["error"] = p.render_job.error
-            except: d["error"] = None
+            except Exception: d["error"] = None
             result.append(d)
         return result
 
@@ -377,7 +378,8 @@ class ChatPollView(APIView):
                 'human_takeover': session.human_takeover,
                 'new_messages': [{'id': m.id, 'role': m.role, 'content': m.content, 'created_at': m.created_at} for m in reversed(new_msgs)],
             })
-        except:
+        except Exception:
+            logger.exception('ChatPollView error')
             return Response({'human_takeover': False, 'new_messages': []})
 
 
