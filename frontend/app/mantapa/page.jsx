@@ -899,6 +899,45 @@ function ArticlesSection({ token }) {
   const [form, setForm] = useState(EMPTY_ARTICLE)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
+  const contentRef = useRef(null)
+
+  function insertAtCursor(before, after = '') {
+    const el = contentRef.current
+    if (!el) return
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const selected = el.value.slice(start, end)
+    const inserted = before + selected + after
+    const newVal = el.value.slice(0, start) + inserted + el.value.slice(end)
+    setF('content', newVal)
+    setTimeout(() => {
+      el.focus()
+      el.selectionStart = start + before.length
+      el.selectionEnd = start + before.length + selected.length
+    }, 0)
+  }
+
+  function insertImage() {
+    const url = prompt('URL รูปภาพ:', 'https://')
+    if (!url) return
+    const alt = prompt('Alt text (คำอธิบายรูป):', '') || ''
+    insertAtCursor(`<img src="${url}" alt="${alt}" />`)
+  }
+
+  function insertLink() {
+    const el = contentRef.current
+    if (!el) return
+    const selected = el.value.slice(el.selectionStart, el.selectionEnd)
+    const url = prompt('URL ลิ้งค์:', 'https://')
+    if (!url) return
+    const text = selected || prompt('ข้อความลิ้งค์:', 'คลิกที่นี่') || 'คลิกที่นี่'
+    const snippet = `<a href="${url}" target="_blank" rel="noopener">${text}</a>`
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const newVal = el.value.slice(0, start) + snippet + el.value.slice(end)
+    setF('content', newVal)
+    setTimeout(() => { el.focus(); el.selectionStart = el.selectionEnd = start + snippet.length }, 0)
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1046,11 +1085,58 @@ function ArticlesSection({ token }) {
 
           <div>
             <label style={labelStyle}>เนื้อหาบทความ (HTML) *</label>
-            <p style={{ fontSize: '0.75rem', color: '#475569', margin: '0 0 6px' }}>
-              ใส่ HTML ได้เลย เช่น &lt;h2&gt;หัวข้อ&lt;/h2&gt; &lt;p&gt;เนื้อหา&lt;/p&gt; &lt;ul&gt;&lt;li&gt;...
-            </p>
+
+            {/* ── Toolbar ── */}
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6,
+              background: 'rgba(255,255,255,.04)',
+              border: '1px solid rgba(255,255,255,.1)',
+              borderRadius: '8px 8px 0 0',
+              padding: '8px 10px',
+            }}>
+              {[
+                { label: 'H2', snippet: ['<h2>', '</h2>'] },
+                { label: 'H3', snippet: ['<h3>', '</h3>'] },
+                { label: 'B',  snippet: ['<strong>', '</strong>'] },
+                { label: 'I',  snippet: ['<em>', '</em>'] },
+                { label: 'P',  snippet: ['<p>', '</p>'] },
+                { label: 'UL', snippet: ['<ul>\n  <li>', '</li>\n</ul>'] },
+                { label: 'LI', snippet: ['<li>', '</li>'] },
+                { label: 'HR', snippet: ['<hr />', ''] },
+                { label: 'Quote', snippet: ['<blockquote>', '</blockquote>'] },
+              ].map(btn => (
+                <button key={btn.label} type="button"
+                  onClick={() => insertAtCursor(btn.snippet[0], btn.snippet[1])}
+                  style={{
+                    background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.15)',
+                    color: '#94a3b8', borderRadius: 6, padding: '4px 10px',
+                    fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                    fontFamily: btn.label === 'B' ? 'serif' : btn.label === 'I' ? 'serif' : 'inherit',
+                    fontStyle: btn.label === 'I' ? 'italic' : 'normal',
+                  }}>
+                  {btn.label}
+                </button>
+              ))}
+              <div style={{ width: 1, background: 'rgba(255,255,255,.1)', margin: '0 2px' }} />
+              <button type="button" onClick={insertImage} style={{
+                background: 'rgba(14,165,233,.12)', border: '1px solid rgba(14,165,233,.3)',
+                color: '#38bdf8', borderRadius: 6, padding: '4px 12px',
+                fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+              }}>🖼 แทรกรูป</button>
+              <button type="button" onClick={insertLink} style={{
+                background: 'rgba(255,122,0,.12)', border: '1px solid rgba(255,122,0,.3)',
+                color: '#FF7A00', borderRadius: 6, padding: '4px 12px',
+                fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+              }}>🔗 แทรกลิ้งค์</button>
+            </div>
+
             <textarea
-              style={{ ...inputStyle, fontFamily: 'monospace', fontSize: '0.82rem', resize: 'vertical' }}
+              ref={contentRef}
+              style={{
+                ...inputStyle,
+                fontFamily: 'monospace', fontSize: '0.82rem', resize: 'vertical',
+                borderRadius: '0 0 8px 8px', borderTop: 'none',
+              }}
               rows={16}
               value={form.content}
               onChange={e => setF('content', e.target.value)}
