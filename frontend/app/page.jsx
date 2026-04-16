@@ -81,7 +81,7 @@ function VideoCard({ slot, label, badge, title, bg, emoji }) {
         </div>
         <video ref={vidRef} src={`/media/demos/${slot}.mp4`}
           className={styles.heroCardVideo} style={{ opacity: playing ? 1 : 0 }}
-          muted loop playsInline preload="none" />
+          muted loop playsInline preload="metadata" />
         <span className={styles.heroCardBadgeOverlay} style={{ background: badge + '22', color: badge }}>
           {label}
         </span>
@@ -155,11 +155,10 @@ function ClipCard({ clip }) {
   return (
     <div className={styles.clipCard} onMouseEnter={play} onMouseLeave={stop} style={{ cursor:'default' }}>
       <div className={styles.clipThumb} style={{ position:'relative' }}>
-        <div className={styles.clipThumbPlaceholder}
-          style={{ opacity: playing ? 0 : 1, position:'absolute', inset:0, background:'#111', transition:'opacity .3s' }} />
         <video ref={vidRef} src={clip.video_url} className={styles.clipThumbImg}
-          style={{ opacity: playing ? 1 : 0, transition:'opacity .3s', position:'absolute', inset:0 }}
-          muted loop playsInline preload="none" />
+          style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}
+          muted loop playsInline preload="metadata"
+          onLoadedMetadata={() => { if (vidRef.current) vidRef.current.currentTime = 0.1 }} />
         {!playing && <span className={styles.clipPlayIcon}>▶</span>}
       </div>
       {clip.product_name && (

@@ -37,6 +37,7 @@ function ClipCard({ clip }) {
             src={clip.file_url}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
             muted loop playsInline preload="metadata"
+            onLoadedMetadata={() => { if (vidRef.current) vidRef.current.currentTime = 0.1 }}
           />
         ) : (
           <img
