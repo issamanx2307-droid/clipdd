@@ -984,6 +984,8 @@ function ArticlesSection({ token }) {
         setMsg({ ok: true, text: d.detail })
         load()
         setEditing(null)
+        // trigger on-demand revalidation so articles page updates immediately
+        fetch(`/api/revalidate?secret=clipdd-revalidate-2025&slug=${encodeURIComponent(form.slug)}`, { method: 'POST' }).catch(() => {})
       } else {
         setMsg({ ok: false, text: d.detail })
       }
@@ -1039,11 +1041,32 @@ function ArticlesSection({ token }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
               <label style={labelStyle}>ชื่อบทความ *</label>
-              <input style={inputStyle} value={form.title} onChange={e => setF('title', e.target.value)} placeholder="10 วิธีเพิ่มยอดวิว..." />
+              <input style={inputStyle} value={form.title} onChange={e => {
+                const title = e.target.value
+                setF('title', title)
+                if (editing === 'new') {
+                  const autoSlug = title.toLowerCase()
+                    .replace(/[^\w\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .slice(0, 80)
+                  setF('slug', autoSlug)
+                }
+              }} placeholder="10 วิธีเพิ่มยอดวิว..." />
             </div>
             <div>
-              <label style={labelStyle}>Slug * (URL: /articles/slug)</label>
-              <input style={inputStyle} value={form.slug} onChange={e => setF('slug', e.target.value)} placeholder="10-วิธี-เพิ่มยอดวิว" />
+              <label style={labelStyle}>Slug * (URL: /articles/<b>slug</b>) — ใช้ a-z, 0-9, - เท่านั้น</label>
+              <input style={{
+                ...inputStyle,
+                borderColor: form.slug && /[^\w-]/.test(form.slug) ? '#ef4444' : inputStyle.borderColor,
+              }} value={form.slug} onChange={e => setF('slug', e.target.value
+                .toLowerCase()
+                .replace(/[^\w-]/g, '-')
+                .replace(/-+/g, '-')
+              )} placeholder="10-ways-to-boost-views" />
+              {form.slug && /[^\w-]/.test(form.slug) && (
+                <p style={{ color: '#ef4444', fontSize: '0.75rem', margin: '4px 0 0' }}>Slug ต้องมีเฉพาะ a-z, 0-9, -</p>
+              )}
             </div>
           </div>
 
@@ -1163,12 +1186,12 @@ function ArticlesSection({ token }) {
           </div>
 
           <div style={{ display: 'flex', gap: 12 }}>
-            <button onClick={save} disabled={saving || !form.title || !form.slug} style={{
+            <button onClick={save} disabled={saving || !form.title || !form.slug || /[^\w-]/.test(form.slug)} style={{
               background: 'linear-gradient(135deg,#FF7A00,#ff5500)', color: '#fff',
               border: 'none', borderRadius: 10, padding: '10px 28px',
               fontWeight: 800, fontSize: '0.9rem',
-              cursor: saving || !form.title || !form.slug ? 'not-allowed' : 'pointer',
-              opacity: saving || !form.title || !form.slug ? 0.5 : 1,
+              cursor: saving || !form.title || !form.slug || /[^\w-]/.test(form.slug) ? 'not-allowed' : 'pointer',
+              opacity: saving || !form.title || !form.slug || /[^\w-]/.test(form.slug) ? 0.5 : 1,
             }}>
               {saving ? '⏳ กำลังบันทึก...' : '💾 บันทึก'}
             </button>
