@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'apps.analytics',
     'rest_framework.authtoken',
     'apps.support',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -107,6 +108,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ClipDD API',
+    'DESCRIPTION': 'API สำหรับระบบสร้างคลิปวิดีโออัตโนมัติด้วย AI',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
 }
 
 # Internationalization
