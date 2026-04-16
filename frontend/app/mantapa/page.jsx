@@ -882,6 +882,280 @@ function ListEditor({ content, saving, onSave, onReset, fields, newItem }) {
 }
 
 // ──────────────────────────────────────────────
+// Articles Section
+// ──────────────────────────────────────────────
+const EMPTY_ARTICLE = {
+  title: '', slug: '', excerpt: '', content: '',
+  category: '', cat_color: '#FF7A00',
+  cover_bg: 'linear-gradient(135deg,#FFF7ED,#FED7AA)',
+  read_time: '5 นาที', meta_title: '', meta_description: '',
+  is_published: false,
+}
+
+function ArticlesSection({ token }) {
+  const [articles, setArticles] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(null)   // null | 'new' | article object
+  const [form, setForm] = useState(EMPTY_ARTICLE)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API}/admin-api/articles/`, { headers: { 'X-Admin-Token': token } })
+      if (res.ok) setArticles(await res.json())
+    } finally { setLoading(false) }
+  }, [token])
+
+  useEffect(() => { load() }, [load])
+
+  function openNew() {
+    setForm({ ...EMPTY_ARTICLE })
+    setEditing('new')
+    setMsg(null)
+  }
+
+  async function openEdit(a) {
+    setMsg(null)
+    try {
+      const res = await fetch(`${API}/admin-api/articles/${a.id}/`, { headers: { 'X-Admin-Token': token } })
+      if (res.ok) {
+        const full = await res.json()
+        setForm(full)
+        setEditing(full)
+      }
+    } catch {}
+  }
+
+  async function save() {
+    setSaving(true); setMsg(null)
+    try {
+      const isNew = editing === 'new'
+      const url = isNew ? `${API}/admin-api/articles/` : `${API}/admin-api/articles/${editing.id}/`
+      const method = isNew ? 'POST' : 'PUT'
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify(form),
+      })
+      const d = await res.json()
+      if (res.ok) {
+        setMsg({ ok: true, text: d.detail })
+        load()
+        setEditing(null)
+      } else {
+        setMsg({ ok: false, text: d.detail })
+      }
+    } catch { setMsg({ ok: false, text: 'เชื่อมต่อไม่ได้' }) }
+    finally { setSaving(false) }
+  }
+
+  async function del(id) {
+    if (!confirm('ลบบทความนี้?')) return
+    try {
+      const res = await fetch(`${API}/admin-api/articles/${id}/`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Token': token },
+      })
+      const d = await res.json()
+      if (res.ok) { setMsg({ ok: true, text: d.detail }); load() }
+      else setMsg({ ok: false, text: d.detail })
+    } catch { setMsg({ ok: false, text: 'เชื่อมต่อไม่ได้' }) }
+  }
+
+  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const inputStyle = {
+    width: '100%', background: 'rgba(255,255,255,.06)',
+    border: '1px solid rgba(255,255,255,.12)', borderRadius: 8,
+    padding: '8px 12px', color: '#e2e8f0', fontSize: '0.87rem',
+    boxSizing: 'border-box',
+  }
+  const labelStyle = { display: 'block', fontSize: '0.78rem', color: '#64748b', marginBottom: 4 }
+
+  if (editing !== null) {
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <button onClick={() => setEditing(null)} style={{
+            background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)',
+            color: '#94a3b8', borderRadius: 8, padding: '7px 16px', cursor: 'pointer',
+          }}>← กลับ</button>
+          <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
+            {editing === 'new' ? '✏️ สร้างบทความใหม่' : '✏️ แก้ไขบทความ'}
+          </h2>
+        </div>
+
+        {msg && (
+          <div style={{
+            marginBottom: 16, padding: '10px 16px', borderRadius: 8,
+            background: msg.ok ? 'rgba(5,150,105,.15)' : 'rgba(220,38,38,.15)',
+            color: msg.ok ? '#34d399' : '#fca5a5', fontSize: '0.85rem',
+          }}>{msg.text}</div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 720 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={labelStyle}>ชื่อบทความ *</label>
+              <input style={inputStyle} value={form.title} onChange={e => setF('title', e.target.value)} placeholder="10 วิธีเพิ่มยอดวิว..." />
+            </div>
+            <div>
+              <label style={labelStyle}>Slug * (URL: /articles/slug)</label>
+              <input style={inputStyle} value={form.slug} onChange={e => setF('slug', e.target.value)} placeholder="10-วิธี-เพิ่มยอดวิว" />
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>บทย่อ (Excerpt)</label>
+            <textarea style={{ ...inputStyle, resize: 'vertical' }} rows={2} value={form.excerpt}
+              onChange={e => setF('excerpt', e.target.value)} placeholder="สรุปสั้นๆ ที่แสดงในการ์ดบทความ..." />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={labelStyle}>หมวดหมู่</label>
+              <input style={inputStyle} value={form.category} onChange={e => setF('category', e.target.value)} placeholder="เทคนิค TikTok" />
+            </div>
+            <div>
+              <label style={labelStyle}>สีหมวดหมู่</label>
+              <input style={inputStyle} value={form.cat_color} onChange={e => setF('cat_color', e.target.value)} placeholder="#FF7A00" />
+            </div>
+            <div>
+              <label style={labelStyle}>เวลาอ่าน</label>
+              <input style={inputStyle} value={form.read_time} onChange={e => setF('read_time', e.target.value)} placeholder="5 นาที" />
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Cover Background (CSS gradient)</label>
+            <input style={inputStyle} value={form.cover_bg} onChange={e => setF('cover_bg', e.target.value)} placeholder="linear-gradient(135deg,#FFF7ED,#FED7AA)" />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={labelStyle}>Meta Title (SEO)</label>
+              <input style={inputStyle} value={form.meta_title} onChange={e => setF('meta_title', e.target.value)} placeholder="ชื่อสำหรับ Google (ถ้าว่างจะใช้ชื่อบทความ)" />
+            </div>
+            <div>
+              <label style={labelStyle}>Meta Description (SEO)</label>
+              <input style={inputStyle} value={form.meta_description} onChange={e => setF('meta_description', e.target.value)} placeholder="คำอธิบายสั้นสำหรับ Google (ไม่เกิน 300 ตัวอักษร)" />
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>เนื้อหาบทความ (HTML) *</label>
+            <p style={{ fontSize: '0.75rem', color: '#475569', margin: '0 0 6px' }}>
+              ใส่ HTML ได้เลย เช่น &lt;h2&gt;หัวข้อ&lt;/h2&gt; &lt;p&gt;เนื้อหา&lt;/p&gt; &lt;ul&gt;&lt;li&gt;...
+            </p>
+            <textarea
+              style={{ ...inputStyle, fontFamily: 'monospace', fontSize: '0.82rem', resize: 'vertical' }}
+              rows={16}
+              value={form.content}
+              onChange={e => setF('content', e.target.value)}
+              placeholder={'<h2>หัวข้อหลัก</h2>\n<p>เนื้อหา...</p>\n<ul>\n  <li>ข้อที่ 1</li>\n</ul>'}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: '#94a3b8', fontSize: '0.87rem' }}>
+              <input type="checkbox" checked={form.is_published} onChange={e => setF('is_published', e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: '#10b981' }} />
+              เผยแพร่ทันที (Published)
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button onClick={save} disabled={saving || !form.title || !form.slug} style={{
+              background: 'linear-gradient(135deg,#FF7A00,#ff5500)', color: '#fff',
+              border: 'none', borderRadius: 10, padding: '10px 28px',
+              fontWeight: 800, fontSize: '0.9rem',
+              cursor: saving || !form.title || !form.slug ? 'not-allowed' : 'pointer',
+              opacity: saving || !form.title || !form.slug ? 0.5 : 1,
+            }}>
+              {saving ? '⏳ กำลังบันทึก...' : '💾 บันทึก'}
+            </button>
+            <button onClick={() => setEditing(null)} style={{
+              background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.15)',
+              color: '#94a3b8', borderRadius: 10, padding: '10px 20px', cursor: 'pointer',
+            }}>ยกเลิก</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h2 className={styles.sectionTitle} style={{ margin: 0 }}>📝 จัดการบทความ</h2>
+        <button onClick={openNew} style={{
+          background: 'linear-gradient(135deg,#FF7A00,#ff5500)', color: '#fff',
+          border: 'none', borderRadius: 10, padding: '9px 20px',
+          fontWeight: 700, fontSize: '0.87rem', cursor: 'pointer',
+        }}>+ สร้างบทความใหม่</button>
+      </div>
+
+      {msg && (
+        <div style={{
+          marginBottom: 16, padding: '10px 16px', borderRadius: 8,
+          background: msg.ok ? 'rgba(5,150,105,.15)' : 'rgba(220,38,38,.15)',
+          color: msg.ok ? '#34d399' : '#fca5a5', fontSize: '0.85rem',
+        }}>{msg.text}</div>
+      )}
+
+      {loading ? <div className={styles.loading}>กำลังโหลด...</div> :
+        articles.length === 0 ? <p className={styles.empty}>ยังไม่มีบทความ — สร้างใหม่ได้เลย</p> : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {articles.map(a => (
+              <div key={a.id} style={{
+                display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+                background: 'rgba(255,255,255,.04)',
+                border: '1px solid rgba(255,255,255,.09)',
+                borderRadius: 12, padding: '14px 16px',
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '0.9rem', marginBottom: 3 }}>
+                    {a.title}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    /{a.slug} · {a.category || '—'} · {a.read_time}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: '0.73rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999,
+                  background: a.is_published ? 'rgba(5,150,105,.2)' : 'rgba(100,116,139,.2)',
+                  color: a.is_published ? '#34d399' : '#64748b',
+                }}>
+                  {a.is_published ? '✅ Published' : '⏸ Draft'}
+                </span>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  <a href={`/articles/${a.slug}`} target="_blank" rel="noreferrer" style={{
+                    background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)',
+                    color: '#94a3b8', borderRadius: 8, padding: '6px 14px',
+                    fontSize: '0.8rem', textDecoration: 'none',
+                  }}>👁 ดู</a>
+                  <button onClick={() => openEdit(a)} style={{
+                    background: 'rgba(255,122,0,.12)', border: '1px solid rgba(255,122,0,.3)',
+                    color: '#FF7A00', borderRadius: 8, padding: '6px 14px',
+                    fontSize: '0.8rem', cursor: 'pointer',
+                  }}>✏️ แก้ไข</button>
+                  <button onClick={() => del(a.id)} style={{
+                    background: 'rgba(220,38,38,.1)', border: '1px solid rgba(220,38,38,.3)',
+                    color: '#fca5a5', borderRadius: 8, padding: '6px 14px',
+                    fontSize: '0.8rem', cursor: 'pointer',
+                  }}>🗑 ลบ</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────
 // Payment Orders Section
 // ──────────────────────────────────────────────
 function PaymentOrdersSection({ token }) {
@@ -1387,6 +1661,7 @@ function Dashboard({ token }) {
     { key: 'credits', label: '💳 API Credits' },
     { key: 'demos', label: '🎬 Demo Clips' },
     { key: 'site', label: '🌐 หน้าเว็บ' },
+    { key: 'articles', label: '📝 บทความ' },
   ]
 
   return (
@@ -1487,6 +1762,12 @@ function Dashboard({ token }) {
       {tab === 'site' && (
         <div className={styles.content}>
           <SiteEditor token={token} />
+        </div>
+      )}
+
+      {tab === 'articles' && (
+        <div className={styles.content}>
+          <ArticlesSection token={token} />
         </div>
       )}
 

@@ -104,6 +104,11 @@ export default function ProfilePage() {
           Clip<span style={{ color: '#E53E3E' }}>DD</span>
         </a>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <a href="/" style={{
+            color: '#94a3b8', fontSize: '0.82rem', textDecoration: 'none',
+            padding: '6px 14px', border: '1px solid rgba(255,255,255,.12)',
+            borderRadius: 999,
+          }}>🏠 หน้าแรก</a>
           <a href="/create" style={{
             color: '#94a3b8', fontSize: '0.82rem', textDecoration: 'none',
             padding: '6px 14px', border: '1px solid rgba(255,255,255,.12)',

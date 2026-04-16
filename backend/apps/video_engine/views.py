@@ -119,3 +119,22 @@ class KlingWebhookView(APIView):
         assemble_video_task.delay(render_job.project_id, video_url)
 
         return Response({'ok': True})
+
+
+class RecentCustomerClipsView(APIView):
+    """Public — returns 6 latest completed customer clips for landing page."""
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        outputs = (VideoOutput.objects
+                   .select_related('project')
+                   .filter(project__status='done')
+                   .order_by('-created_at')[:6])
+        data = [{
+            'id': o.project_id,
+            'video_url': absolute_media_url(o.video_url),
+            'product_name': o.project.product_name,
+            'duration': o.duration,
+        } for o in outputs]
+        return Response(data)

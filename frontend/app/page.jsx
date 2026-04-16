@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import styles from './page.module.css'
 
 // ── static defaults ────────────────────────────────────────────────
@@ -130,10 +130,10 @@ function AnimSection({ children, className }) {
   )
 }
 
-function ClipCard({ thumb }) {
+// Customer-generated clip card (VideoOutput shape: { id, video_url, product_name, duration })
+function ClipCard({ clip }) {
   const vidRef = useRef(null)
   const [playing, setPlaying] = useState(false)
-  const isVideo = thumb?.file_type === 'video'
 
   function play() {
     const v = vidRef.current; if (!v) return
@@ -144,24 +144,31 @@ function ClipCard({ thumb }) {
     v.pause(); v.currentTime = 0; setPlaying(false)
   }
 
-  const href = thumb ? `/clips/${thumb.id}` : '/clips'
+  if (!clip) {
+    return (
+      <div className={styles.clipCard}>
+        <div className={styles.clipThumb}><div className={styles.clipThumbPlaceholder} /></div>
+      </div>
+    )
+  }
 
   return (
-    <a href={href} className={styles.clipCard}
-      onMouseEnter={isVideo ? play : undefined}
-      onMouseLeave={isVideo ? stop : undefined}>
-      <div className={styles.clipThumb}>
-        {!thumb && <div className={styles.clipThumbPlaceholder} />}
-        {thumb && !isVideo && <img src={thumb.file_url} alt={thumb.title} className={styles.clipThumbImg} />}
-        {thumb && isVideo && <>
-          <div className={styles.clipThumbPlaceholder} style={{ opacity: playing ? 0 : 1, position:'absolute', inset:0, background:'#111' }} />
-          <video ref={vidRef} src={thumb.file_url} className={styles.clipThumbImg}
-            style={{ opacity: playing ? 1 : 0, transition:'opacity .3s', position:'absolute', inset:0 }}
-            muted loop playsInline preload="none" />
-          {!playing && <span className={styles.clipPlayIcon}>▶</span>}
-        </>}
+    <div className={styles.clipCard} onMouseEnter={play} onMouseLeave={stop} style={{ cursor:'default' }}>
+      <div className={styles.clipThumb} style={{ position:'relative' }}>
+        <div className={styles.clipThumbPlaceholder}
+          style={{ opacity: playing ? 0 : 1, position:'absolute', inset:0, background:'#111', transition:'opacity .3s' }} />
+        <video ref={vidRef} src={clip.video_url} className={styles.clipThumbImg}
+          style={{ opacity: playing ? 1 : 0, transition:'opacity .3s', position:'absolute', inset:0 }}
+          muted loop playsInline preload="none" />
+        {!playing && <span className={styles.clipPlayIcon}>▶</span>}
       </div>
-    </a>
+      {clip.product_name && (
+        <div style={{ padding:'6px 10px 8px', fontSize:'0.75rem', color:'#94a3b8',
+          textAlign:'center', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+          {clip.product_name}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -171,7 +178,7 @@ export default function Home() {
   const [stats, setStats] = useState(DEFAULT_STATS)
   const [deals, setDeals] = useState(DEFAULT_DEALS)
   const [articles, setArticles] = useState(DEFAULT_ARTICLES)
-  const [thumbs, setThumbs] = useState([])   // [] = loaded but empty
+  const [customerClips, setCustomerClips] = useState(null)  // null = loading
 
   useEffect(() => {
     fetch('/api/site-content/').then(r => r.ok ? r.json() : null).then(data => {
@@ -181,33 +188,24 @@ export default function Home() {
       if (data.deals?.length) setDeals(data.deals)
       if (data.articles?.length) setArticles(data.articles)
     }).catch(() => {})
-    fetch('/api/clip-thumbnails/').then(r => r.ok ? r.json() : []).then(data => {
-      setThumbs(Array.isArray(data) ? data : [])
-    }).catch(() => {})
+    fetch('/api/videos/recent/').then(r => r.ok ? r.json() : []).then(data => {
+      setCustomerClips(Array.isArray(data) ? data : [])
+    }).catch(() => setCustomerClips([]))
   }, [])
-
-  // Shuffle once on load, show 6
-  const displayThumbs = useMemo(() => {
-    const arr = [...thumbs]
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]]
-    }
-    return arr.slice(0, 6)
-  }, [thumbs])
 
   return (
     <main className={styles.main}>
 
       {/* ── NAV ── */}
       <nav className={styles.nav}>
-        <span className={styles.logo}>
+        <a href="/" className={styles.logo} style={{ textDecoration:'none' }}>
           Clip<span className={styles.logoAccent}>DD</span>
-        </span>
+        </a>
         <div className={styles.navLinks}>
           <a href="#clips"    className={styles.navLink}>ตัวอย่างคลิป</a>
+          <a href="/clips"    className={styles.navLink}>รวมคลิปขำๆ</a>
           <a href="#deals"    className={styles.navLink}>ดีล</a>
-          <a href="#articles" className={styles.navLink}>บทความ</a>
+          <a href="/articles" className={styles.navLink}>หาเงินจาก TikTok</a>
           <a href="#how"      className={styles.navLink}>วิธีใช้</a>
           <a href="#pricing"  className={styles.navLink}>ราคา</a>
         </div>
@@ -270,7 +268,7 @@ export default function Home() {
 
       {/* ── CATEGORY PILLS ── */}
       <AnimSection>
-        <div className={styles.pillsSection} id="clips">
+        <div className={styles.pillsSection}>
           <p className={styles.pillsLabel}>สไตล์คลิป</p>
           <div className={styles.pills}>
             {CLIP_STYLES.map(s => (
@@ -286,17 +284,20 @@ export default function Home() {
         </div>
       </AnimSection>
 
-      {/* ── FUNNY CLIPS ── */}
+      {/* ── CUSTOMER EXAMPLE CLIPS ── */}
       <AnimSection>
-        <div className={styles.clipsSection}>
+        <div className={styles.clipsSection} id="clips">
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>😂 รวมคลิปขำๆ</h2>
-            <a href="/clips" className={styles.sectionMore}>ดูทั้งหมด →</a>
+            <h2 className={styles.sectionTitle}>🎬 ตัวอย่างคลิปจากลูกค้าจริง</h2>
+            <a href="/register" className={styles.sectionMore}>สร้างคลิปของคุณ →</a>
           </div>
           <div className={styles.clipsGrid}>
-            {(displayThumbs.length > 0 ? displayThumbs : Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => null)).map((thumb, i) => (
-              <ClipCard key={thumb?.id ?? i} thumb={thumb} />
-            ))}
+            {customerClips === null
+              ? Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => <ClipCard key={i} clip={null} />)
+              : customerClips.length === 0
+                ? Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => <ClipCard key={i} clip={null} />)
+                : customerClips.map((clip, i) => <ClipCard key={clip.id ?? i} clip={clip} />)
+            }
           </div>
         </div>
       </AnimSection>
@@ -331,7 +332,7 @@ export default function Home() {
       <AnimSection>
         <section className={styles.articlesSection} id="articles">
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>📖 บทความน่าอ่าน</h2>
+            <h2 className={styles.sectionTitle}>💰 วิธีหาเงินให้ได้จริงจากติ้กต้อก</h2>
             <a href="/articles" className={styles.sectionMore}>ดูทั้งหมด →</a>
           </div>
           <div className={styles.articlesGrid}>
@@ -410,7 +411,7 @@ export default function Home() {
           <div className={styles.footerLinks}>
             <a href="#clips"    className={styles.footerLink}>ตัวอย่างคลิป</a>
             <a href="/deals"    className={styles.footerLink}>ดีล</a>
-            <a href="/articles" className={styles.footerLink}>บทความ</a>
+            <a href="/articles" className={styles.footerLink}>หาเงินจาก TikTok</a>
             <a href="#pricing"  className={styles.footerLink}>ราคา</a>
             <a href="/terms"    className={styles.footerLink}>ข้อกำหนด</a>
             <a href="/privacy"  className={styles.footerLink}>ความเป็นส่วนตัว</a>
