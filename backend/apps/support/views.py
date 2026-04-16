@@ -1225,6 +1225,7 @@ class PublicArticleListView(APIView):
             'category': a.category,
             'cat_color': a.cat_color,
             'cover_bg': a.cover_bg,
+            'cover_image': a.cover_image,
             'read_time': a.read_time,
             'published_at': a.published_at.isoformat() if a.published_at else None,
         }
@@ -1247,6 +1248,7 @@ class PublicArticleDetailView(APIView):
             'category': a.category,
             'cat_color': a.cat_color,
             'cover_bg': a.cover_bg,
+            'cover_image': a.cover_image,
             'read_time': a.read_time,
             'meta_title': a.meta_title or a.title,
             'meta_description': a.meta_description or a.excerpt,
@@ -1292,6 +1294,7 @@ class AdminArticleListView(APIView):
             category=d.get('category', '').strip(),
             cat_color=d.get('cat_color', '#FF7A00').strip(),
             cover_bg=d.get('cover_bg', 'linear-gradient(135deg,#FFF7ED,#FED7AA)').strip(),
+            cover_image=d.get('cover_image', '').strip(),
             read_time=d.get('read_time', '5 นาที').strip(),
             meta_title=d.get('meta_title', '').strip(),
             meta_description=d.get('meta_description', '').strip(),
@@ -1315,7 +1318,8 @@ class AdminArticleDetailView(APIView):
             'id': a.id, 'slug': a.slug, 'title': a.title,
             'excerpt': a.excerpt, 'content': a.content,
             'category': a.category, 'cat_color': a.cat_color,
-            'cover_bg': a.cover_bg, 'read_time': a.read_time,
+            'cover_bg': a.cover_bg, 'cover_image': a.cover_image,
+            'read_time': a.read_time,
             'meta_title': a.meta_title, 'meta_description': a.meta_description,
             'is_published': a.is_published,
             'published_at': a.published_at.isoformat() if a.published_at else None,
@@ -1341,6 +1345,7 @@ class AdminArticleDetailView(APIView):
         a.category         = d.get('category', a.category).strip()
         a.cat_color        = d.get('cat_color', a.cat_color).strip()
         a.cover_bg         = d.get('cover_bg', a.cover_bg).strip()
+        a.cover_image      = d.get('cover_image', a.cover_image).strip()
         a.read_time        = d.get('read_time', a.read_time).strip()
         a.meta_title       = d.get('meta_title', a.meta_title).strip()
         a.meta_description = d.get('meta_description', a.meta_description).strip()

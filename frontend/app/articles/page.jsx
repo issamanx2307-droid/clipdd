@@ -111,9 +111,13 @@ function ArticleCard({ article, colorIdx }) {
   const bg = article.cover_bg || CAT_COLORS[colorIdx]
   return (
     <a href={`/articles/${article.slug}`} className={styles.card}>
-      <div className={styles.cardCover} style={{ background: bg }}>
+      <div className={styles.cardCover} style={{ background: bg, position: 'relative', overflow: 'hidden' }}>
+        {article.cover_image && (
+          <img src={article.cover_image} alt={article.title}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        )}
         <span className={styles.cardCat}
-          style={{ color: article.cat_color, background: article.cat_color + '20' }}>
+          style={{ color: article.cat_color, background: article.cat_color + '20', position: 'relative', zIndex: 1 }}>
           {article.category}
         </span>
       </div>

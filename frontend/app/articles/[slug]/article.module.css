@@ -95,6 +95,14 @@
   border-radius: 20px;
   margin-bottom: 48px;
 }
+.coverImg {
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+  border-radius: 20px;
+  margin-bottom: 48px;
+  display: block;
+}
 
 /* ── CONTENT (HTML rendered) ── */
 .content {

@@ -73,7 +73,11 @@ export default async function ArticlePage({ params }) {
         </header>
 
         {/* Cover */}
-        <div className={styles.cover} style={{ background: article.cover_bg }} />
+        {article.cover_image ? (
+          <img src={article.cover_image} alt={article.title} className={styles.coverImg} />
+        ) : (
+          <div className={styles.cover} style={{ background: article.cover_bg }} />
+        )}
 
         {/* Content */}
         <div

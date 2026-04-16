@@ -888,6 +888,7 @@ const EMPTY_ARTICLE = {
   title: '', slug: '', excerpt: '', content: '',
   category: '', cat_color: '#FF7A00',
   cover_bg: 'linear-gradient(135deg,#FFF7ED,#FED7AA)',
+  cover_image: '',
   read_time: '5 นาที', meta_title: '', meta_description: '',
   is_published: false,
 }
@@ -1067,9 +1068,18 @@ function ArticlesSection({ token }) {
             </div>
           </div>
 
-          <div>
-            <label style={labelStyle}>Cover Background (CSS gradient)</label>
-            <input style={inputStyle} value={form.cover_bg} onChange={e => setF('cover_bg', e.target.value)} placeholder="linear-gradient(135deg,#FFF7ED,#FED7AA)" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={labelStyle}>URL รูปภาพ Cover (ถ้ามี — แสดงแทน gradient)</label>
+              <input style={inputStyle} value={form.cover_image || ''} onChange={e => setF('cover_image', e.target.value)} placeholder="https://example.com/image.jpg" />
+              {form.cover_image && (
+                <img src={form.cover_image} alt="preview" style={{ marginTop: 6, height: 60, borderRadius: 6, objectFit: 'cover', width: '100%' }} />
+              )}
+            </div>
+            <div>
+              <label style={labelStyle}>Cover Background (CSS gradient — fallback)</label>
+              <input style={inputStyle} value={form.cover_bg} onChange={e => setF('cover_bg', e.target.value)} placeholder="linear-gradient(135deg,#FFF7ED,#FED7AA)" />
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>

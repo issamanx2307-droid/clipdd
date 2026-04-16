@@ -37,6 +37,7 @@ class Article(models.Model):
     category         = models.CharField(max_length=100, blank=True)
     cat_color        = models.CharField(max_length=20, default='#FF7A00')
     cover_bg         = models.CharField(max_length=200, default='linear-gradient(135deg,#FFF7ED,#FED7AA)')
+    cover_image      = models.URLField(max_length=500, blank=True)
     read_time        = models.CharField(max_length=30, default='5 นาที')
     meta_title       = models.CharField(max_length=200, blank=True)
     meta_description = models.CharField(max_length=300, blank=True)
