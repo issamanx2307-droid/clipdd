@@ -31,7 +31,7 @@ urlpatterns = [
     path('admin-api/orders/<int:pk>/', AdminOrderActionView.as_view()),
     path('admin-api/payment-settings/', AdminPaymentSettingsView.as_view()),
     path('articles/', PublicArticleListView.as_view()),
-    path('articles/<slug:slug>/', PublicArticleDetailView.as_view()),
+    path('articles/<str:slug>/', PublicArticleDetailView.as_view()),
     path('admin-api/articles/', AdminArticleListView.as_view()),
     path('admin-api/articles/<int:pk>/', AdminArticleDetailView.as_view()),
 ]
